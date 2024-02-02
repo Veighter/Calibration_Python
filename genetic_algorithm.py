@@ -1,6 +1,6 @@
 
 """_summary_
-Die Python Datei ist ein genetischer Algorithmus zur direkten Suche des globalen Maximums
+Die Python Datei ist ein differentieller evoluionaerer(genetischer) Algorithmus zur direkten Suche des globalen Maximums
 der Kostenfunktion (Euklid-Norm) für die Kalibrierung einer IMU
 """
 import data_plotting as dp
@@ -163,18 +163,33 @@ def determine_static_coefficients(dataset):
 
 """
 def calibrate_sensor(quasi_static_points, sensor):
+    population = np.array()
     if sensor == "acc":
-        initialise_population(SEARCH_SPACE_DEFAULT)
+        population = initialise_population(SEARCH_SPACE_DEFAULT)
     if sensor == "gyro":
-        initialise_population(SEARCH_SPACE_DEFAULT)
+        population = initialise_population(SEARCH_SPACE_DEFAULT)
     if sensor == "mag":
-        initialise_population(SEARCH_SPACE_MAG)
+        population = initialise_population(SEARCH_SPACE_MAG)
+
+    
+    
     return
 
 def initialise_population(search_space):
     dimension = np.shape(search_space)[0]
     population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(POPULATION_SIZE), dimension))
     return population
+
+def cost_function(parameter_vector, quasi_static_measurements, sensor):
+    cost = 0
+    if sensor == "acc":
+        for measurement in quasi_static_measurements:
+            cost += (1-np.linalg.norm(np.matrix((parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9])*measurement-np.array(parameter_vector[9], parameter_vector[10], parameter_vector[11]))))**2
+        
+    cost = 0
+
+
+
 
 
 
