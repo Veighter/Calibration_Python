@@ -135,22 +135,8 @@ def determine_static_coefficients(dataset):
     # ax.plot(dataset[:,0]/10e2, static_coefficient)
     # plot.show()
 
-    # quasi static coeeficient = 1/(1+s_a+s_m+s+g) -> individual function block??
-
     # np.extract(condition, data) fuer spaeter
 
-    # for _,acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z in dataset:
-
-    #     # Accelerometer
-    #     highpass_acc_x = sig.sosfilt(b_h_acc, a_h_acc, acc_x)
-    #     highpass_acc_y = sig.sosfilt(b_h_acc, a_h_acc, acc_y)
-    #     highpass_acc_z = sig.sosfilt(b_h_acc, a_h_acc, acc_z)
-
-    #     highpass_acc = [highpass_acc_x, highpass_acc_y, highpass_acc_z]
-
-    #     relu_acc = relu(highpass_acc)
-
-    #     quasi_static_acc_coefficient = np.linalg.norm([])
     return 
 
 
