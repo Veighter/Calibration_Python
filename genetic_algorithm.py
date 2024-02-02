@@ -43,36 +43,51 @@ def get_measurements(filepath):
 
 # TODO Bestimmen des quasi static coefficient der Raw Measurements, zur Auswahl der Messwerte der Kalibrierung
 def determine_static_coefficients(dataset):
+
+    time = dataset[:, 0]
+    acc_x = dataset[:, 1]
+    acc_y = dataset[:, 2]
+    acc_z = dataset[:, 3]
+    mag_x =  mag_x
+    mag_y =  mag_y
+    mag_z =  mag_z
+    gyro_x = gyro_x
+    gyro_y = dataset[:, 5]
+    gyro_z = dataset[:, 6]
+
+
     # Low and Highfilter of the Accelerometer
     lowpass_filter_acc = sig.butter(ORDER, 15.0, btype="lowpass", output="sos", fs=100.0)
     highpass_filter_acc = sig.butter(ORDER, 45.0, btype="highpass", output="sos", fs = 100.0)
 
-    filtered_acc_x = sig.sosfilt(highpass_filter_acc, dataset[:,1]) # ACC_X
+    filtered_acc_x = sig.sosfilt(highpass_filter_acc, acc_x) # ACC_X
+
+
 
     # Plot Raw Measurement and Original Data
     fig = plot.figure(tight_layout=True)
     gs = gridspec.GridSpec(2,1)
     ax = fig.add_subplot(gs[0,0])
-    ax.plot(dataset[:,0], dataset[:,1])
+    ax.plot(time, acc_x)
     ax = fig.add_subplot(gs[1,0])
-    ax.plot(dataset[:,0], filtered_acc_x)
+    ax.plot(time, filtered_acc_x)
     plot.show()
 
     filtered_acc_x = rectification(filtered_acc_x)
 
     # fig, ax = plot.subplots()
-    # ax.plot(dataset[:,0], filtered_acc_x)
+    # ax.plot(time, filtered_acc_x)
     # plot.show()
 
     filtered_acc_x = sig.sosfilt(lowpass_filter_acc,filtered_acc_x)
 
     # fig, ax = plot.subplots()
-    # ax.plot(dataset[:,0], filtered_acc_x)
+    # ax.plot(time, filtered_acc_x)
     # plot.show()
 
 
-    filtered_acc_y = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, dataset[:,2]))) # ACC_Y
-    filtered_acc_z = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, dataset[:,3]))) # ACC_Z
+    filtered_acc_y = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_y))) # ACC_Y
+    filtered_acc_z = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_z))) # ACC_Z
 
     filtered_acc = np.array([(filtered_acc_x), (filtered_acc_y), (filtered_acc_z)])
 
@@ -89,9 +104,9 @@ def determine_static_coefficients(dataset):
     lowpass_filter_mag = sig.butter(ORDER, 15.0, btype="lowpass", output="sos", fs=100.0)
     highpass_filter_acc = sig.butter(ORDER, 45.0, btype="highpass", output="sos", fs=100.0)
 
-    filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, dataset[:, 7]))) # MAG_X
-    filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, dataset[:, 8]))) # MAG_Y
-    filtered_mag_z = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, dataset[:, 9]))) # MAG_Z
+    filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_x))) # MAG_X
+    filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_y))) # MAG_Y
+    filtered_mag_z = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_z))) # MAG_Z
 
     filtered_mag = np.array([(filtered_mag_x), (filtered_mag_y), (filtered_mag_z)])
 
@@ -104,9 +119,9 @@ def determine_static_coefficients(dataset):
     # Gyroscope quasi-static detector
     lowpass_filter_gyro = sig.butter(ORDER, 10.0, btype="lowpass", output="sos", fs=100.0)
 
-    filtered_gyro_x = sig.sosfilt(lowpass_filter_gyro, rectification(dataset[:,4])) # GYRO_X
-    filtered_gyro_y = sig.sosfilt(lowpass_filter_gyro, rectification(dataset[:,5])) # GYRO_Y
-    filtered_gyro_z = sig.sosfilt(lowpass_filter_gyro, rectification(dataset[:,6])) # GYRO_Z
+    filtered_gyro_x = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_x)) # GYRO_X
+    filtered_gyro_y = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_y)) # GYRO_Y
+    filtered_gyro_z = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_z)) # GYRO_Z
 
     filtered_gyro = np.array([(filtered_gyro_x), (filtered_gyro_y), (filtered_gyro_z)])
 
@@ -127,12 +142,13 @@ def determine_static_coefficients(dataset):
         #print(f"Coefficient sum: {coefficient[0]+coefficient[1]+coefficient[2]}")
         static_coefficient.append(1./(1.+coefficient[0]+coefficient[1]+coefficient[2]))
 
-    print(max(static_coefficient))
-    static_coefficient.sort()
-    print(static_coefficient)
+    fig, [ax1, ax2] = plot.subplots()
+    ax1.plot(time, acc_x)
+    ax1.plot(time, )
+
 
     # fig, ax = plot.subplots()
-    # ax.plot(dataset[:,0]/10e2, static_coefficient)
+    # ax.plot(time/10e2, static_coefficient)
     # plot.show()
 
     # np.extract(condition, data) fuer spaeter
