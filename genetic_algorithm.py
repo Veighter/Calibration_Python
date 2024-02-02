@@ -4,7 +4,7 @@ Die Python Datei ist ein genetischer Algorithmus zur direkten Suche des globalen
 der Kostenfunktion (Euklid-Norm) für die Kalibrierung einer IMU
 """
 import data_plotting as dp
-
+import random as rd 
 import numpy as np
 import math
 import pandas as pd
@@ -12,7 +12,14 @@ import scipy.signal as sig
 import matplotlib.pyplot as plot
 import matplotlib.gridspec as gridspec
 
-ORDER = 32
+ORDER = 5
+POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
+SEARCH_SPACE_DEFAULT = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5)]
+SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)]
+CROSSOVER_PROBABILITY = 0.9
+DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
+
+
 
 def rectification(dataset):
     rectification = []
@@ -48,44 +55,18 @@ def determine_static_coefficients(dataset):
     acc_x = dataset[:, 1]
     acc_y = dataset[:, 2]
     acc_z = dataset[:, 3]
-    mag_x =  mag_x
-    mag_y =  mag_y
-    mag_z =  mag_z
-    gyro_x = gyro_x
+    mag_x =  dataset[:,7]
+    mag_y =  dataset[:, 8]
+    mag_z =  dataset[:, 9]
+    gyro_x = dataset[:,4]
     gyro_y = dataset[:, 5]
     gyro_z = dataset[:, 6]
 
 
     # Low and Highfilter of the Accelerometer
-    lowpass_filter_acc = sig.butter(ORDER, 15.0, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 45.0, btype="highpass", output="sos", fs = 100.0)
-
-    filtered_acc_x = sig.sosfilt(highpass_filter_acc, acc_x) # ACC_X
-
-
-
-    # Plot Raw Measurement and Original Data
-    fig = plot.figure(tight_layout=True)
-    gs = gridspec.GridSpec(2,1)
-    ax = fig.add_subplot(gs[0,0])
-    ax.plot(time, acc_x)
-    ax = fig.add_subplot(gs[1,0])
-    ax.plot(time, filtered_acc_x)
-    plot.show()
-
-    filtered_acc_x = rectification(filtered_acc_x)
-
-    # fig, ax = plot.subplots()
-    # ax.plot(time, filtered_acc_x)
-    # plot.show()
-
-    filtered_acc_x = sig.sosfilt(lowpass_filter_acc,filtered_acc_x)
-
-    # fig, ax = plot.subplots()
-    # ax.plot(time, filtered_acc_x)
-    # plot.show()
-
-
+    lowpass_filter_acc = sig.butter(ORDER, 5, btype="lowpass", output="sos", fs=100.0)
+    highpass_filter_acc = sig.butter(ORDER, 49, btype="highpass", output="sos", fs = 100.0)
+    filtered_acc_x = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_x))) # ACC_X
     filtered_acc_y = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_y))) # ACC_Y
     filtered_acc_z = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_z))) # ACC_Z
 
@@ -94,15 +75,13 @@ def determine_static_coefficients(dataset):
     quasi_static_acc_coefficient = []
 
     
-
     for acc in filtered_acc.T:
         quasi_static_acc_coefficient.append(np.linalg.norm(acc))
 
-    print(max(quasi_static_acc_coefficient))
 
     # Magnetometer quasi-static detector
-    lowpass_filter_mag = sig.butter(ORDER, 15.0, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 45.0, btype="highpass", output="sos", fs=100.0)
+    lowpass_filter_mag = sig.butter(ORDER, 1, btype="lowpass", output="sos", fs=100.0)
+    highpass_filter_acc = sig.butter(ORDER, 20, btype="highpass", output="sos", fs=100.0)
 
     filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_x))) # MAG_X
     filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_y))) # MAG_Y
@@ -117,7 +96,7 @@ def determine_static_coefficients(dataset):
 
     
     # Gyroscope quasi-static detector
-    lowpass_filter_gyro = sig.butter(ORDER, 10.0, btype="lowpass", output="sos", fs=100.0)
+    lowpass_filter_gyro = sig.butter(ORDER, 1, btype="lowpass", output="sos", fs=100.0)
 
     filtered_gyro_x = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_x)) # GYRO_X
     filtered_gyro_y = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_y)) # GYRO_Y
@@ -132,24 +111,27 @@ def determine_static_coefficients(dataset):
 
     quasi_static_coefficients = np.array([(quasi_static_acc_coefficient), (quasi_static_mag_coefficient), (quasi_static_gyro_coefficient)])
 
-    
-    # min = np.max(quasi_static_acc_coefficient)
-    # print(f"Quasi-Static-Detectors: \n{min}")
 
     static_coefficient = []
     for coefficient in quasi_static_coefficients.T:
+        static_coefficient.append(1./(1.+coefficient[0]))
 
-        #print(f"Coefficient sum: {coefficient[0]+coefficient[1]+coefficient[2]}")
-        static_coefficient.append(1./(1.+coefficient[0]+coefficient[1]+coefficient[2]))
 
-    fig, [ax1, ax2] = plot.subplots()
+    fig, [ax1, ax2] = plot.subplots(2,1)
     ax1.plot(time, acc_x)
-    ax1.plot(time, )
+    ax1.plot(time, acc_y)
+    ax1.plot(time, acc_z)
+    ax1.set_xlim(time[0], time[-1])
+    ax1.set_ylabel('acc [mG]')
+    ax1.set_xlabel('t [s]')
+    ax1.set_title('Raw Accelerometer Measurements')
+    ax2.plot(time, static_coefficient)
+    ax2.set_xlim(time[0], time[-1])
+    ax2.set_ylabel('q-s-Coeff')
+    ax2.set_xlabel('t [s]')
+    ax2.set_title('Quasi-static-Coefficient')
+    plot.show()
 
-
-    # fig, ax = plot.subplots()
-    # ax.plot(time/10e2, static_coefficient)
-    # plot.show()
 
     # np.extract(condition, data) fuer spaeter
 
@@ -171,9 +153,8 @@ def determine_static_coefficients(dataset):
 5. Solange Selektion bis Abbruchkriterium (durch Fintessfunktion) erreicht ist
 
 
-# TODO initialize population
-# TODO evalutation
-# TODO parent selection
+# [x] initialize population
+# TODO evalutation, parent selection
 # TODO variation (yiel offspring)
 # TODO evaluation (of offspring)
 # TODO survival selection (yields new population)
@@ -181,6 +162,20 @@ def determine_static_coefficients(dataset):
 # TODO ouput of best individual
 
 """
+def calibrate_sensor(quasi_static_points, sensor):
+    if sensor == "acc":
+        initialise_population(SEARCH_SPACE_DEFAULT)
+    if sensor == "gyro":
+        initialise_population(SEARCH_SPACE_DEFAULT)
+    if sensor == "mag":
+        initialise_population(SEARCH_SPACE_MAG)
+    return
+
+def initialise_population(search_space):
+    dimension = np.shape(search_space)[0]
+    population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(POPULATION_SIZE), dimension))
+    return population
+
 
 
 def main ():
@@ -188,8 +183,8 @@ def main ():
 
     #dp.plot_measurements_out_of_data(raw_measurements)
 
-    determine_static_coefficients(raw_measurements)
-
+    # determine_static_coefficients(raw_measurements)
+    initialise_population(SEARCH_SPACE_ACC_GYRO)
 
 if __name__ == "__main__":
     main()
