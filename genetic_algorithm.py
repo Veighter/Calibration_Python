@@ -112,30 +112,33 @@ def determine_static_coefficients(dataset):
     quasi_static_coefficients = np.array([(quasi_static_acc_coefficient), (quasi_static_mag_coefficient), (quasi_static_gyro_coefficient)])
 
 
-    static_coefficient = []
+    static_coefficients = []
     for coefficient in quasi_static_coefficients.T:
-        static_coefficient.append(1./(1.+coefficient[0]))
+        static_coefficients.append(1./(1.+coefficient[0]))
 
+    static_coefficients = np.array(static_coefficients)
 
-    fig, [ax1, ax2] = plot.subplots(2,1)
-    ax1.plot(time, acc_x)
-    ax1.plot(time, acc_y)
-    ax1.plot(time, acc_z)
-    ax1.set_xlim(time[0], time[-1])
-    ax1.set_ylabel('acc [mG]')
-    ax1.set_xlabel('t [s]')
-    ax1.set_title('Raw Accelerometer Measurements')
-    ax2.plot(time, static_coefficient)
-    ax2.set_xlim(time[0], time[-1])
-    ax2.set_ylabel('q-s-Coeff')
-    ax2.set_xlabel('t [s]')
-    ax2.set_title('Quasi-static-Coefficient')
-    plot.show()
+    print(np.shape(static_coefficients))
+
+    # fig, [ax1, ax2] = plot.subplots(2,1)
+    # ax1.plot(time, acc_x)
+    # ax1.plot(time, acc_y)
+    # ax1.plot(time, acc_z)
+    # ax1.set_xlim(time[0], time[-1])
+    # ax1.set_ylabel('acc [mG]')
+    # ax1.set_xlabel('t [s]')
+    # ax1.set_title('Raw Accelerometer Measurements')
+    # ax2.plot(time, static_coefficients)
+    # ax2.set_xlim(time[0], time[-1])
+    # ax2.set_ylabel('q-s-Coeff')
+    # ax2.set_xlabel('t [s]')
+    # ax2.set_title('Quasi-static-Coefficient')
+    # plot.show()
 
 
     # np.extract(condition, data) fuer spaeter
 
-    return 
+    return static_coefficients
 
 
 """ Erklärung/ Terminologie
@@ -154,7 +157,8 @@ def determine_static_coefficients(dataset):
 
 
 # [x] initialize population
-# TODO evalutation, parent selection
+# [x] evalutation
+# TODO parent selection
 # TODO variation (yiel offspring)
 # TODO evaluation (of offspring)
 # TODO survival selection (yields new population)
@@ -162,8 +166,8 @@ def determine_static_coefficients(dataset):
 # TODO ouput of best individual
 
 """
-def calibrate_sensor(quasi_static_points, sensor):
-    population = np.array()
+def calibrate_sensor(quasi_static_measurements, sensor):
+    population = np.array([])
     if sensor == "acc":
         population = initialise_population(SEARCH_SPACE_DEFAULT)
     if sensor == "gyro":
@@ -171,22 +175,32 @@ def calibrate_sensor(quasi_static_points, sensor):
     if sensor == "mag":
         population = initialise_population(SEARCH_SPACE_MAG)
 
+
+    generation = 0
+    costs = evaluation(population, quasi_static_measurements, sensor)[0]
+    while  costs >= 1000 and generation <= 5:
+        
+        costs = evaluation(population, quasi_static_measurements, sensor)[0]
+        generation+=1
     
-    
-    return
 
 def initialise_population(search_space):
     dimension = np.shape(search_space)[0]
     population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(POPULATION_SIZE), dimension))
     return population
 
-def cost_function(parameter_vector, quasi_static_measurements, sensor):
-    cost = 0
-    if sensor == "acc":
-        for measurement in quasi_static_measurements:
-            cost += (1-np.linalg.norm(np.matrix((parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9])*measurement-np.array(parameter_vector[9], parameter_vector[10], parameter_vector[11]))))**2
-        
-    cost = 0
+def evaluation(parameter_vectors, quasi_static_measurements, sensor):
+    cost = []
+    for parameter_vector in parameter_vectors:
+        new_cost = 0
+        if sensor == "acc":
+            for measurement in quasi_static_measurements:
+                new_cost += (1-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+        cost.append(new_cost)
+
+        min_cost = min(cost)
+        index_fittest_vector = cost.index(min_cost)
+    return min_cost, index_fittest_vector
 
 
 
@@ -198,8 +212,21 @@ def main ():
 
     #dp.plot_measurements_out_of_data(raw_measurements)
 
-    # determine_static_coefficients(raw_measurements)
-    initialise_population(SEARCH_SPACE_ACC_GYRO)
+    quasi_static_coefficients = determine_static_coefficients(raw_measurements)
+
+    indixes = quasi_static_coefficients > 0.98
+
+    quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
+
+    calibrate_sensor(quasi_static_measurements=quasi_static_measurements[:, 1:4], sensor='acc')
+    
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     main()
