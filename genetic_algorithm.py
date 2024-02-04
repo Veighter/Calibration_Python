@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 
 ORDER = 5
 POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
-SEARCH_SPACE_DEFAULT = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5)]
+SEARCH_SPACE_DEFAULT = [(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2)]
 SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)]
 CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
@@ -118,7 +118,6 @@ def determine_static_coefficients(dataset):
 
     static_coefficients = np.array(static_coefficients)
 
-    print(np.shape(static_coefficients))
 
     # fig, [ax1, ax2] = plot.subplots(2,1)
     # ax1.plot(time, acc_x)
@@ -156,9 +155,12 @@ def determine_static_coefficients(dataset):
 5. Solange Selektion bis Abbruchkriterium (durch Fintessfunktion) erreicht ist
 
 
-# [x] initialize population
-# [x] evalutation
-# TODO parent selection
+
+
+
+
+
+
 # TODO variation (yiel offspring)
 # TODO evaluation (of offspring)
 # TODO survival selection (yields new population)
@@ -166,29 +168,57 @@ def determine_static_coefficients(dataset):
 # TODO ouput of best individual
 
 """
+# TODO parent selection / evolution
+def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
+    new_population = []
+    for parameter_vector in parameter_vectors:
+        picked_parents = rd.sample([_ for _ in parameter_vectors if not np.array_equal(_, parameter_vector)], 3)
+        picked_parents = np.array(picked_parents)
+        # print(picked_parents)
+        random_index = rd.randint(0,dimension-1)
+        new_individuum = np.zeros(dimension)
+        for i in range(dimension):
+            if rd.uniform(0,1)<CROSSOVER_PROBABILITY or i == random_index:
+                new_individuum[i] = picked_parents[0][i]+DIFFERENTIAL_WEIGHT*(picked_parents[1][i]-picked_parents[2][i])
+            else:
+                new_individuum[i] = parameter_vector[i] 
+        if evaluation([new_individuum], quasi_static_measurements, sensor)<=evaluation([parameter_vector], quasi_static_measurements, sensor):
+            new_population.append(new_individuum)
+        else:
+            new_population.append(parameter_vector)
+    return np.array(new_population)
+
+
+
+
 def calibrate_sensor(quasi_static_measurements, sensor):
     population = np.array([])
-    if sensor == "acc":
-        population = initialise_population(SEARCH_SPACE_DEFAULT)
-    if sensor == "gyro":
-        population = initialise_population(SEARCH_SPACE_DEFAULT)
+    search_space = None
+    if sensor == "acc" or sensor == "gyro":
+        search_space = SEARCH_SPACE_DEFAULT
+        population = initialize_population(search_space)
+
     if sensor == "mag":
-        population = initialise_population(SEARCH_SPACE_MAG)
+        population = initialize_population(SEARCH_SPACE_MAG)
 
 
     generation = 0
-    costs = evaluation(population, quasi_static_measurements, sensor)[0]
-    while  costs >= 1000 and generation <= 5:
-        
-        costs = evaluation(population, quasi_static_measurements, sensor)[0]
+    costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
+    while  costs >= 1000 and generation <= 10000:
+        population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
+        costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
         generation+=1
     
+    print(index_fittest_vector)
 
-def initialise_population(search_space):
+    
+# [x] initialize population
+def initialize_population(search_space):
     dimension = np.shape(search_space)[0]
     population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(POPULATION_SIZE), dimension))
     return population
 
+# [x] evalutation
 def evaluation(parameter_vectors, quasi_static_measurements, sensor):
     cost = []
     for parameter_vector in parameter_vectors:
@@ -230,7 +260,3 @@ def main ():
 
 if __name__ == "__main__":
     main()
-
-
-
-
