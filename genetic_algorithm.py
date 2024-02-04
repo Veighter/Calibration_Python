@@ -208,8 +208,8 @@ def calibrate_sensor(quasi_static_measurements, sensor):
         population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
         costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
         generation+=1
-    
-    print(index_fittest_vector)
+
+    return population[index_fittest_vector]
 
     
 # [x] initialize population
@@ -233,7 +233,14 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
     return min_cost, index_fittest_vector
 
 
+def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
+    if sensor == "acc":
+        theta = np.array(calibration_params[0:3], calibration_params[3:7], calibration_params[6:10])
+        bias = np.array(calibration_params[9], calibration_params[10], calibration_params[11])
+        for raw_measurement in raw_measurements:
+                raw_measurement =  theta@raw_measurement.T - bias
 
+    return raw_measurement
 
 
 
@@ -248,8 +255,9 @@ def main ():
 
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
 
-    calibrate_sensor(quasi_static_measurements=quasi_static_measurements[:, 1:4], sensor='acc')
+    calibration_parameters = calibrate_sensor(quasi_static_measurements=quasi_static_measurements[:, 1:4], sensor='acc')
     
+    calibrated_measurements = get_calibrated_measurement()
 
 
 
