@@ -204,7 +204,7 @@ def calibrate_sensor(quasi_static_measurements, sensor):
 
     generation = 0
     costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
-    while  costs >= 1000 and generation <= 10000:
+    while  costs >= 1000 and generation <= 1000:
         population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
         costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
         generation+=1
@@ -234,13 +234,14 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
 
 
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
+    calibrated_measurements = []
     if sensor == "acc":
-        theta = np.array(calibration_params[0:3], calibration_params[3:7], calibration_params[6:10])
-        bias = np.array(calibration_params[9], calibration_params[10], calibration_params[11])
+        theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
+        bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
-                raw_measurement =  theta@raw_measurement.T - bias
+                calibrated_measurements.append(theta@raw_measurement.T - bias)
 
-    return raw_measurement
+    return np.array(calibrated_measurements)
 
 
 
@@ -257,7 +258,26 @@ def main ():
 
     calibration_parameters = calibrate_sensor(quasi_static_measurements=quasi_static_measurements[:, 1:4], sensor='acc')
     
-    calibrated_measurements = get_calibrated_measurement()
+    calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+
+    time = raw_measurements[:,0]
+    acc_x = raw_measurements[:,1]
+    acc_y = raw_measurements[:,2]
+    acc_z = raw_measurements[:,3]
+
+
+    calibrated_acc_x = calibrated_measurements[:,0]
+    calibrated_acc_y = calibrated_measurements[:,1]
+    calibrated_acc_z = calibrated_measurements[:,2]
+
+    fig, [ax1, ax2] = plot.subplots(2,1)
+    ax1.plot(time, acc_x)
+    ax1.plot(time, acc_y)
+    ax1.plot(time, acc_z)
+    ax2.plot(time, calibrated_acc_x)
+    ax2.plot(time, calibrated_acc_y)
+    ax2.plot(time, calibrated_acc_z)
+    plot.show()
 
 
 
