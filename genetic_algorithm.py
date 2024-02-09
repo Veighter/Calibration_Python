@@ -14,7 +14,8 @@ import matplotlib.gridspec as gridspec
 
 ORDER = 5
 POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
-SEARCH_SPACE_DEFAULT = [(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2)]
+SEARCH_SPACE_ACC = [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)]
+SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)]  # attention with search space  unit 
 SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)]
 CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
@@ -168,7 +169,7 @@ def determine_static_coefficients(dataset):
 # TODO ouput of best individual
 
 """
-# TODO parent selection / evolution
+# [x] parent selection / evolution
 def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
     new_population = []
     for parameter_vector in parameter_vectors:
@@ -194,17 +195,20 @@ def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
 def calibrate_sensor(quasi_static_measurements, sensor):
     population = np.array([])
     search_space = None
-    if sensor == "acc" or sensor == "gyro":
-        search_space = SEARCH_SPACE_DEFAULT
-        population = initialize_population(search_space)
+    if sensor == "acc" :
+        search_space = SEARCH_SPACE_ACC
+
+    if sensor == "gyro":
+        search_space = SEARCH_SPACE_GYRO
 
     if sensor == "mag":
-        population = initialize_population(SEARCH_SPACE_MAG)
+        search_space = SEARCH_SPACE_MAG
 
+    population = initialize_population(search_space)
 
     generation = 0
     costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
-    while  costs >= 1000 and generation <= 1000:
+    while  costs >= 1000 and generation <= 100000:
         population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
         costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
         generation+=1
@@ -225,8 +229,13 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
         new_cost = 0
         if sensor == "acc":
             for measurement in quasi_static_measurements:
-                new_cost += (1-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+                new_cost += (1000-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
         cost.append(new_cost)
+        if sensor == "gyro":
+            new_cost += 0
+        if sensor == "mag":
+            for measurement in quasi_static_measurements:
+                new_cost += (1-np.linalg.norm())
 
         min_cost = min(cost)
         index_fittest_vector = cost.index(min_cost)
