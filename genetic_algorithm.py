@@ -268,47 +268,19 @@ def main ():
     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
     raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
-    #dp.plot_measurements_out_of_data(raw_measurements)
+    
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
+    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
+
     indixes = quasi_static_coefficients > 0.98
 
-   
-
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
-
-    
 
     # calibration_parameters = calibrate_sensor(quasi_static_measurements[:, 1:4], "acc")
     
     # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
-
-    time = raw_measurements[:,0]
-
-    # acc_x = raw_measurements[:,1]
-    # acc_y = raw_measurements[:,2]
-    # acc_z = raw_measurements[:,3]
-
-
-    # calibrated_acc_x = calibrated_measurements[:,0]
-    # calibrated_acc_y = calibrated_measurements[:,1]
-    # calibrated_acc_z = calibrated_measurements[:,2]
-
-    # fig, [ax1, ax2] = plot.subplots(2,1)
-    # ax1.plot(time, acc_x)
-    # ax1.plot(time, acc_y)
-    # ax1.plot(time, acc_z)
-    # ax2.plot(time, calibrated_acc_x)
-    # ax2.plot(time, calibrated_acc_y)
-    # ax2.plot(time, calibrated_acc_z)
-    # plot.show()
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
