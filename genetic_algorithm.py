@@ -74,8 +74,8 @@ def determine_static_coefficients(dataset):
 
 
     # Low and Highfilter of the Accelerometer
-    lowpass_filter_acc = sig.butter(ORDER, 10, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 40, btype="highpass", output="sos", fs = 100.0)
+    lowpass_filter_acc = sig.butter(ORDER, 5, btype="lowpass", output="sos", fs=100.0)
+    highpass_filter_acc = sig.butter(ORDER, 49, btype="highpass", output="sos", fs = 100.0)
     filtered_acc_x = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_x))) # ACC_X
     filtered_acc_y = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_y))) # ACC_Y
     filtered_acc_z = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_z))) # ACC_Z
@@ -129,11 +129,11 @@ def determine_static_coefficients(dataset):
 
     # Magnetometer quasi-static detector
     lowpass_filter_mag = sig.butter(ORDER, 10, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 40, btype="highpass", output="sos", fs=100.0)
+    highpass_filter_mag = sig.butter(ORDER, 40, btype="highpass", output="sos", fs=100.0)
 
-    filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_x))) # MAG_X
-    filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_y))) # MAG_Y
-    filtered_mag_z = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_z))) # MAG_Z
+    filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_mag, mag_x))) # MAG_X
+    filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_mag, mag_y))) # MAG_Y
+    filtered_mag_z = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_mag, mag_z))) # MAG_Z
 
     filtered_mag = np.array([(filtered_mag_x), (filtered_mag_y), (filtered_mag_z)])
 
@@ -156,8 +156,10 @@ def determine_static_coefficients(dataset):
 
     for gyro in filtered_gyro.T:
         quasi_static_gyro_coefficient.append(np.linalg.norm(gyro))
+
+    static_coefficients = np.array(1./(1.+np.array(quasi_static_mag_coefficient)))    
     
-    static_coefficients = np.array(1./(1.+np.array(quasi_static_acc_coefficient)+np.array(quasi_static_mag_coefficient)+np.array(quasi_static_gyro_coefficient)))
+    #static_coefficients = np.array(1./(1.+np.array(quasi_static_acc_coefficient)+np.array(quasi_static_mag_coefficient)+np.array(quasi_static_gyro_coefficient)))
 
 
     return static_coefficients
@@ -268,7 +270,7 @@ def main ():
     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
     raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
-    
+    print(f"Anzahl Samples: {len(raw_measurements)}")    
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
@@ -278,6 +280,7 @@ def main ():
 
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
 
+    print(len(quasi_static_measurements))
     # calibration_parameters = calibrate_sensor(quasi_static_measurements[:, 1:4], "acc")
     
     # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
