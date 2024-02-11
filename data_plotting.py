@@ -8,7 +8,7 @@ def plot_measurements_out_of_file():
         # TODO plot the raw measurements with matplotlib
         print('this')
 
-def plot_measurements_out_of_data(measurements):
+def plot_measurements_out_of_data(measurements, **static_coefficients):
 
     fig = plot.figure(tight_layout=True)
     gs = gridspec.GridSpec(3,1)

@@ -3,6 +3,22 @@
 Die Python Datei ist ein differentieller evoluionaerer(genetischer) Algorithmus zur direkten Suche des globalen Maximums
 der Kostenfunktion (Euklid-Norm) für die Kalibrierung einer IMU
 """
+
+""" 
+Erklärung/ Terminologie
+1. Individuen sind die Grundform eines gentischen Algorithmus 
+    - jedes Individuum welches existiert, existiert in einer Generation, einem Zeitschritt
+    - Individuen einer Generation bilden die Population
+2. Natuerliche Selektion
+    - die besten Individueen setzen sich durch und geben ihre Gene weiter
+    - Fitnessfunktion, meist Zielfunktion, ist das Auswahlkriterium
+3. Nachwuchs / Nächste Generation
+    - Die Erzeugung einer nächsten Generation erzeugt durch Nachwuchs aus den Zusammenkommen der vorherigen
+    - verschiedene Paarungsmöglichkeiten für Gene (Cross-Over, Zahlendreher, Ausschneiden, weitere in Vorlesung "Computational Intelligence")
+4. Mutation in der Generation bringt Vielfalt und Diversität
+    - meist zufällig
+5. Solange Selektion bis Abbruchkriterium (durch Fintessfunktion) erreicht ist
+"""
 import data_plotting as dp
 import random as rd 
 import numpy as np
@@ -14,9 +30,9 @@ import matplotlib.gridspec as gridspec
 
 ORDER = 5
 POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
-SEARCH_SPACE_ACC = [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)]
-SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)]  # attention with search space  unit 
-SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)]
+SEARCH_SPACE_ACC = [(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000)] # milli gs
+SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)] # degrees per seconde
+SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)] # micro Tesla
 CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
 
@@ -25,17 +41,10 @@ DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
 def rectification(dataset):
     rectification = []
     for data in dataset:
-        rectification.append(abs(data))
+    # rectification.append(abs(data))
+        rectification.append(np.linalg.norm(data)) # vector norm
 
     return rectification
-
-def relu(dataset):
-    relu = []
-
-    for data in dataset:
-        relu.append(max(0.0,data))
-
-    return relu
 
 
 def get_measurements(filepath):
@@ -59,30 +68,68 @@ def determine_static_coefficients(dataset):
     mag_x =  dataset[:,7]
     mag_y =  dataset[:, 8]
     mag_z =  dataset[:, 9]
-    gyro_x = dataset[:,4]
+    gyro_x = dataset[:,4] 
     gyro_y = dataset[:, 5]
     gyro_z = dataset[:, 6]
 
 
     # Low and Highfilter of the Accelerometer
-    lowpass_filter_acc = sig.butter(ORDER, 5, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 49, btype="highpass", output="sos", fs = 100.0)
+    lowpass_filter_acc = sig.butter(ORDER, 10, btype="lowpass", output="sos", fs=100.0)
+    highpass_filter_acc = sig.butter(ORDER, 40, btype="highpass", output="sos", fs = 100.0)
     filtered_acc_x = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_x))) # ACC_X
     filtered_acc_y = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_y))) # ACC_Y
     filtered_acc_z = sig.sosfilt(lowpass_filter_acc,rectification(sig.sosfilt(highpass_filter_acc, acc_z))) # ACC_Z
 
+    # acc_x_hp = np.diff(acc_x,prepend=acc_x[0])
+    # acc_y_hp = np.diff(acc_y,prepend=acc_y[0])
+    # acc_z_hp = np.diff(acc_z, prepend=acc_z[0])
+
+    # fig, ax1= plot.subplots()
+    # ax1.plot(time, acc_x_hp)
+    # ax1.plot(time, acc_y_hp)
+    # ax1.plot(time, acc_z_hp)
+    # ax1.set_title("Highpass")
+    # plot.show()
+
+
+    # rect_acc_x = np.abs(acc_x_hp)
+    # rect_acc_y = np.abs(acc_y_hp)
+    # rect_acc_z = np.abs(acc_z_hp)
+
+    # fig, ax1= plot.subplots()
+    # ax1.plot(time, rect_acc_x)
+    # ax1.plot(time, rect_acc_y)
+    # ax1.plot(time, rect_acc_z)
+    # ax1.set_title("Reftifier")
+    # plot.show()
+
+    # # low pass filter
+    # window_size = 6
+    # kernel_weights = np.ones(window_size)/window_size
+
+
+    # filtered_acc_x = np.convolve(rect_acc_x, kernel_weights, mode='same')
+    # filtered_acc_y =  np.convolve(rect_acc_y, kernel_weights, mode='same')
+    # filtered_acc_z = np.convolve(rect_acc_z, kernel_weights, mode='same')
+
+    # fig, ax1= plot.subplots()
+    # ax1.plot(time,filtered_acc_x)
+    # ax1.plot(time, filtered_acc_y)
+    # ax1.plot(time, filtered_acc_z)
+    # ax1.set_title("Lowpass")
+    # plot.show()
+
     filtered_acc = np.array([(filtered_acc_x), (filtered_acc_y), (filtered_acc_z)])
 
     quasi_static_acc_coefficient = []
-
     
     for acc in filtered_acc.T:
-        quasi_static_acc_coefficient.append(np.linalg.norm(acc))
+        quasi_static_acc_coefficient.append(np.linalg.norm(acc)/1000) # be carful with the units
 
 
     # Magnetometer quasi-static detector
-    lowpass_filter_mag = sig.butter(ORDER, 1, btype="lowpass", output="sos", fs=100.0)
-    highpass_filter_acc = sig.butter(ORDER, 20, btype="highpass", output="sos", fs=100.0)
+    lowpass_filter_mag = sig.butter(ORDER, 10, btype="lowpass", output="sos", fs=100.0)
+    highpass_filter_acc = sig.butter(ORDER, 40, btype="highpass", output="sos", fs=100.0)
 
     filtered_mag_x = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_x))) # MAG_X
     filtered_mag_y = sig.sosfilt(lowpass_filter_mag, rectification(sig.sosfilt(highpass_filter_acc, mag_y))) # MAG_Y
@@ -93,11 +140,11 @@ def determine_static_coefficients(dataset):
     quasi_static_mag_coefficient = []
 
     for mag in filtered_mag.T:
-        quasi_static_mag_coefficient.append(np.linalg.norm(mag))
+        quasi_static_mag_coefficient.append(np.linalg.norm(mag)/49.4006)
 
-    
+
     # Gyroscope quasi-static detector
-    lowpass_filter_gyro = sig.butter(ORDER, 1, btype="lowpass", output="sos", fs=100.0)
+    lowpass_filter_gyro = sig.butter(ORDER, 10, btype="lowpass", output="sos", fs=100.0)
 
     filtered_gyro_x = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_x)) # GYRO_X
     filtered_gyro_y = sig.sosfilt(lowpass_filter_gyro, rectification(gyro_y)) # GYRO_Y
@@ -109,57 +156,13 @@ def determine_static_coefficients(dataset):
 
     for gyro in filtered_gyro.T:
         quasi_static_gyro_coefficient.append(np.linalg.norm(gyro))
+    
+    static_coefficients = np.array(1./(1.+np.array(quasi_static_acc_coefficient)+np.array(quasi_static_mag_coefficient)+np.array(quasi_static_gyro_coefficient)))
 
-    quasi_static_coefficients = np.array([(quasi_static_acc_coefficient), (quasi_static_mag_coefficient), (quasi_static_gyro_coefficient)])
-
-
-    static_coefficients = []
-    for coefficient in quasi_static_coefficients.T:
-        static_coefficients.append(1./(1.+coefficient[0]))
-
-    static_coefficients = np.array(static_coefficients)
-
-
-    # fig, [ax1, ax2] = plot.subplots(2,1)
-    # ax1.plot(time, acc_x)
-    # ax1.plot(time, acc_y)
-    # ax1.plot(time, acc_z)
-    # ax1.set_xlim(time[0], time[-1])
-    # ax1.set_ylabel('acc [mG]')
-    # ax1.set_xlabel('t [s]')
-    # ax1.set_title('Raw Accelerometer Measurements')
-    # ax2.plot(time, static_coefficients)
-    # ax2.set_xlim(time[0], time[-1])
-    # ax2.set_ylabel('q-s-Coeff')
-    # ax2.set_xlabel('t [s]')
-    # ax2.set_title('Quasi-static-Coefficient')
-    # plot.show()
-
-
-    # np.extract(condition, data) fuer spaeter
 
     return static_coefficients
 
-
-""" Erklärung/ Terminologie
-1. Individuen sind die Grundform eines gentischen Algorithmus 
-    - jedes Individuum welches existiert, existiert in einer Generation, einem Zeitschritt
-    - Individuen einer Generation bilden die Population
-2. Natuerliche Selektion
-    - die besten Individueen setzen sich durch und geben ihre Gene weiter
-    - Fitnessfunktion, meist Zielfunktion, ist das Auswahlkriterium
-3. Nachwuchs / Nächste Generation
-    - Die Erzeugung einer nächsten Generation erzeugt durch Nachwuchs aus den Zusammenkommen der vorherigen
-    - verschiedene Paarungsmöglichkeiten für Gene (Cross-Over, Zahlendreher, Ausschneiden, weitere in Vorlesung "Computational Intelligence")
-4. Mutation in der Generation bringt Vielfalt und Diversität
-    - meist zufällig
-5. Solange Selektion bis Abbruchkriterium (durch Fintessfunktion) erreicht ist
-
-
-
-
-
-
+"""
 
 
 # TODO variation (yiel offspring)
@@ -169,6 +172,8 @@ def determine_static_coefficients(dataset):
 # TODO ouput of best individual
 
 """
+
+
 # [x] parent selection / evolution
 def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
     new_population = []
@@ -190,8 +195,6 @@ def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
     return np.array(new_population)
 
 
-
-
 def calibrate_sensor(quasi_static_measurements, sensor):
     population = np.array([])
     search_space = None
@@ -208,10 +211,12 @@ def calibrate_sensor(quasi_static_measurements, sensor):
 
     generation = 0
     costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
-    while  costs >= 1000 and generation <= 100000:
+    while  costs >= 1000 and generation <= 1000000: # adjust costs due to the unit searching for?? Or one general residual error
         population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
         costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
         generation+=1
+    
+    print(evaluation(population[index_fittest_vector], quasi_static_measurements, "acc"))
 
     return population[index_fittest_vector]
 
@@ -229,16 +234,18 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
         new_cost = 0
         if sensor == "acc":
             for measurement in quasi_static_measurements:
-                new_cost += (1000-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
-        cost.append(new_cost)
+                new_cost += ((1000)**2-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+        
         if sensor == "gyro":
             new_cost += 0
         if sensor == "mag":
             for measurement in quasi_static_measurements:
-                new_cost += (1-np.linalg.norm())
+                new_cost += (1-np.linalg.norm()/49.4006) # norm by magnetic field at my position in same unit 
 
-        min_cost = min(cost)
-        index_fittest_vector = cost.index(min_cost)
+        cost.append(new_cost)
+
+    min_cost = min(cost)
+    index_fittest_vector = cost.index(min_cost)
     return min_cost, index_fittest_vector
 
 
@@ -257,36 +264,45 @@ def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
 def main ():
     raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
 
+    raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
+    raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
+    raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
+
     #dp.plot_measurements_out_of_data(raw_measurements)
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
     indixes = quasi_static_coefficients > 0.98
 
+   
+
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
 
-    calibration_parameters = calibrate_sensor(quasi_static_measurements=quasi_static_measurements[:, 1:4], sensor='acc')
     
-    calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+
+    # calibration_parameters = calibrate_sensor(quasi_static_measurements[:, 1:4], "acc")
+    
+    # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
 
     time = raw_measurements[:,0]
-    acc_x = raw_measurements[:,1]
-    acc_y = raw_measurements[:,2]
-    acc_z = raw_measurements[:,3]
+
+    # acc_x = raw_measurements[:,1]
+    # acc_y = raw_measurements[:,2]
+    # acc_z = raw_measurements[:,3]
 
 
-    calibrated_acc_x = calibrated_measurements[:,0]
-    calibrated_acc_y = calibrated_measurements[:,1]
-    calibrated_acc_z = calibrated_measurements[:,2]
+    # calibrated_acc_x = calibrated_measurements[:,0]
+    # calibrated_acc_y = calibrated_measurements[:,1]
+    # calibrated_acc_z = calibrated_measurements[:,2]
 
-    fig, [ax1, ax2] = plot.subplots(2,1)
-    ax1.plot(time, acc_x)
-    ax1.plot(time, acc_y)
-    ax1.plot(time, acc_z)
-    ax2.plot(time, calibrated_acc_x)
-    ax2.plot(time, calibrated_acc_y)
-    ax2.plot(time, calibrated_acc_z)
-    plot.show()
+    # fig, [ax1, ax2] = plot.subplots(2,1)
+    # ax1.plot(time, acc_x)
+    # ax1.plot(time, acc_y)
+    # ax1.plot(time, acc_z)
+    # ax2.plot(time, calibrated_acc_x)
+    # ax2.plot(time, calibrated_acc_y)
+    # ax2.plot(time, calibrated_acc_z)
+    # plot.show()
 
 
 
