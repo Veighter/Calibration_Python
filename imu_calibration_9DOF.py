@@ -1,5 +1,5 @@
 
-
+import ga_utils_IMU_Calibration as ga
 import data_plotting as dp
 import random as rd 
 import numpy as np
@@ -18,7 +18,6 @@ CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
 
 
-
 def rectification(dataset):
     rectification = []
     for data in dataset:
@@ -26,7 +25,6 @@ def rectification(dataset):
         # rectification.append(np.abs(data))
 
     return rectification
-
 
 def get_measurements(filepath):
     """Get Method of the Raw Measurements of an IMU
@@ -125,78 +123,13 @@ def determine_static_coefficients(dataset):
 
     return static_coefficients
 
-
-# [x] parent selection / evolution
-def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
-    new_population = []
-    for parameter_vector in parameter_vectors:
-        picked_parents = rd.sample([_ for _ in parameter_vectors if not np.array_equal(_, parameter_vector)], 3)
-        picked_parents = np.array(picked_parents)
-        # print(picked_parents)
-        random_index = rd.randint(0,dimension-1)
-        new_individuum = np.zeros(dimension)
-        for i in range(dimension):
-            if rd.uniform(0,1)<CROSSOVER_PROBABILITY or i == random_index:
-                new_individuum[i] = picked_parents[0][i]+DIFFERENTIAL_WEIGHT*(picked_parents[1][i]-picked_parents[2][i])
-            else:
-                new_individuum[i] = parameter_vector[i] 
-        if evaluation([new_individuum], quasi_static_measurements, sensor)<=evaluation([parameter_vector], quasi_static_measurements, sensor):
-            new_population.append(new_individuum)
-        else:
-            new_population.append(parameter_vector)
-    return np.array(new_population)
-
-def calibrate_sensor(quasi_static_measurements, sensor):
-    population = np.array([])
-    search_space = None
-    if sensor == "acc" :
-        search_space = SEARCH_SPACE_ACC
-
-    if sensor == "gyro":
-        search_space = SEARCH_SPACE_GYRO
-
+def calibrate_sensor_ga(quasi_static_measurements, sensor):
+    if sensor == "acc":
+        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_ACC, 1000, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
     if sensor == "mag":
-        search_space = SEARCH_SPACE_MAG
-
-    population = initialize_population(search_space)
-
-    generation = 0
-    costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
-    while  costs >= 1000 and generation <= 1000000: # adjust costs due to the unit searching for?? Or one general residual error
-        population =  evolution(population, np.shape(search_space)[0], quasi_static_measurements, sensor)
-        costs, index_fittest_vector = evaluation(population, quasi_static_measurements, sensor)
-        generation+=1
-    
-    print(evaluation(population[index_fittest_vector], quasi_static_measurements, "acc"))
-
-    return population[index_fittest_vector]
-    
-# [x] initialize population
-def initialize_population(search_space):
-    dimension = np.shape(search_space)[0]
-    population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(POPULATION_SIZE), dimension))
-    return population
-
-# [x] evalutation
-def evaluation(parameter_vectors, quasi_static_measurements, sensor):
-    cost = []
-    for parameter_vector in parameter_vectors:
-        new_cost = 0
-        if sensor == "acc":
-            for measurement in quasi_static_measurements:
-                new_cost += ((1000)**2-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
-        
-        if sensor == "gyro":
-            new_cost += 0
-        if sensor == "mag":
-            for measurement in quasi_static_measurements:
-                new_cost += (1-np.linalg.norm()/49.4006) # norm by magnetic field at my position in same unit 
-
-        cost.append(new_cost)
-
-    min_cost = min(cost)
-    index_fittest_vector = cost.index(min_cost)
-    return min_cost, index_fittest_vector
+        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_MAG, 15, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
+    if sensor == "gyro":
+        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
 
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []

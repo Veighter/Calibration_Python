@@ -22,11 +22,13 @@ Erklärung/ Terminologie
 import numpy as np
 import random as rd
 
+# [x] initialize population
 def init_population(search_space, population_size):
     dimension = np.shape(search_space)[0]
     population = np.random.uniform(low=[limits[0] for limits in search_space], high=[limits[1] for limits in search_space], size=(int(population_size), dimension))
     return population
 
+# [x] evalutation
 def evaluation(parameter_vectors, quasi_static_measurements, sensor):
     cost = []
     for parameter_vector in parameter_vectors:
@@ -47,6 +49,7 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
     index_fittest_vector = cost.index(min_cost)
     return min_cost, index_fittest_vector
 
+# [x] parent selection / evolution
 def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor, crossover_probability, differential_weight ):
     new_population = []
     for parameter_vector in parameter_vectors:
