@@ -131,6 +131,9 @@ def calibrate_sensor_ga(quasi_static_measurements, sensor):
     if sensor == "gyro":
         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
 
+def calibrate_sensor_lm(quasi_static_measurements, sensor):
+    pass
+
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
     if sensor == "acc":
@@ -159,9 +162,9 @@ def main ():
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
 
     print(f"Potenzielle statische Zustaende: {len(quasi_static_measurements)}")
-    # calibration_parameters = calibrate_sensor(quasi_static_measurements[:, 1:4], "acc")
+    calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
     
-    # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+    calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
 
 
 if __name__ == "__main__":
