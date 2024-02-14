@@ -72,34 +72,6 @@ def determine_static_coefficients(dataset):
     # ax1.set_title("Highpass")
     # plot.show()
 
-
-    # rect_acc_x = np.abs(acc_x_hp)
-    # rect_acc_y = np.abs(acc_y_hp)
-    # rect_acc_z = np.abs(acc_z_hp)
-
-    # fig, ax1= plot.subplots()
-    # ax1.plot(time, rect_acc_x)
-    # ax1.plot(time, rect_acc_y)
-    # ax1.plot(time, rect_acc_z)
-    # ax1.set_title("Reftifier")
-    # plot.show()
-
-    # # low pass filter
-    # window_size = 6
-    # kernel_weights = np.ones(window_size)/window_size
-
-
-    # filtered_acc_x = np.convolve(rect_acc_x, kernel_weights, mode='same')
-    # filtered_acc_y =  np.convolve(rect_acc_y, kernel_weights, mode='same')
-    # filtered_acc_z = np.convolve(rect_acc_z, kernel_weights, mode='same')
-
-    # fig, ax1= plot.subplots()
-    # ax1.plot(time,filtered_acc_x)
-    # ax1.plot(time, filtered_acc_y)
-    # ax1.plot(time, filtered_acc_z)
-    # ax1.set_title("Lowpass")
-    # plot.show()
-
     filtered_acc = np.array([(filtered_acc_x), (filtered_acc_y), (filtered_acc_z)])
 
     quasi_static_acc_coefficient = []
@@ -154,8 +126,6 @@ def determine_static_coefficients(dataset):
     return static_coefficients
 
 
-
-
 # [x] parent selection / evolution
 def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
     new_population = []
@@ -175,7 +145,6 @@ def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor):
         else:
             new_population.append(parameter_vector)
     return np.array(new_population)
-
 
 def calibrate_sensor(quasi_static_measurements, sensor):
     population = np.array([])
@@ -201,7 +170,6 @@ def calibrate_sensor(quasi_static_measurements, sensor):
     print(evaluation(population[index_fittest_vector], quasi_static_measurements, "acc"))
 
     return population[index_fittest_vector]
-
     
 # [x] initialize population
 def initialize_population(search_space):
@@ -230,7 +198,6 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
     index_fittest_vector = cost.index(min_cost)
     return min_cost, index_fittest_vector
 
-
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
     if sensor == "acc":
@@ -240,8 +207,6 @@ def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
                 calibrated_measurements.append(theta@raw_measurement.T - bias)
 
     return np.array(calibrated_measurements)
-
-
 
 def main ():
     raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
