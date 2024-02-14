@@ -70,7 +70,7 @@ def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor, c
     return np.array(new_population)
 
 def acc_fitness(parameter_vector, quasi_static_measurement):
-    return ((1000)**2-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ quasi_static_measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+    return ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ quasi_static_measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
 
 def gyro_fitness():
     pass

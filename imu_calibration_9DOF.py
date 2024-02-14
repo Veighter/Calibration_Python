@@ -6,6 +6,7 @@ import numpy as np
 import math
 import pandas as pd
 import scipy.signal as sig
+from scipy.optimize import least_squares
 import matplotlib.pyplot as plot
 import matplotlib.gridspec as gridspec
 
@@ -16,6 +17,8 @@ SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,
 SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)] # micro Tesla
 CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
+
+quasi_static_states = []
 
 
 def rectification(dataset):
@@ -131,10 +134,21 @@ def calibrate_sensor_ga(quasi_static_measurements, sensor):
     if sensor == "gyro":
         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
 
-def calibrate_sensor_lm(quasi_static_measurements, sensor):
-    pass
+def calibrate_sensor_lm(sensor, initial_parameter_vector):
+    if sensor == "acc":
+        return least_squares(acc_fitness, initial_parameter_vector)
+
+def acc_fitness(parameter_vector):
+    cost = 0
+    print(len(quasi_static_states))
+    for state in quasi_static_states:
+        cost += ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ state.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+    print(f"Cost: {cost}")
+    return np.array(cost)
 
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
+
+
     calibrated_measurements = []
     if sensor == "acc":
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
@@ -143,6 +157,8 @@ def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
                 calibrated_measurements.append(theta@raw_measurement.T - bias)
 
     return np.array(calibrated_measurements)
+
+
 
 def main ():
     raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
@@ -155,17 +171,22 @@ def main ():
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
-    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
+   # dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
 
     indixes = quasi_static_coefficients > 0.98
 
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
-
+    quasi_static_states = quasi_static_measurements
     print(f"Potenzielle statische Zustaende: {len(quasi_static_measurements)}")
-    calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
+    #calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
+    calibration_parameters = calibrate_sensor_lm("acc", [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000])
     
     calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
 
+    fig, [ax1,ax2] = plot.subplots(2,1)
+    ax1.plot(raw_measurements[:,0], calibrated_measurements)
+    ax2.plot(raw_measurements[:,0], raw_measurements[:,1:4])
+    plot.show()
 
 if __name__ == "__main__":
     main()
