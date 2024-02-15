@@ -1,6 +1,6 @@
 
 import ga_utils_IMU_Calibration as ga
-import data_plotting as dp
+import data_plotting_IMU_9DOF as dp
 import random as rd 
 import numpy as np
 import math
@@ -177,12 +177,7 @@ def main ():
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements))  if indixes[i]] )
     print(f"Anzahl Quasi-statischer-Zustaende: {len(quasi_static_measurements)}")
 
-    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
-
-    fig, ax = plot.subplots(1,1)
-    ax.plot(raw_measurements[:, 0], indixes)
-    plot.show()
-
+    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients, shw_t=True)
 
     # quasi_static_states = quasi_static_measurements
     # #print(f"Potenzielle statische Zustaende: {quasi_static_states}")
