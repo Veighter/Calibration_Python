@@ -134,8 +134,8 @@ def calibrate_sensor_ga(quasi_static_measurements, sensor):
 
 def calibrate_sensor_lm(sensor, quasi_static_measurements):
     if sensor == "acc":
-        initial_parameter_vector = [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
-        return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000)
+        initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+        return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000, method='lm')
 
 def acc_fitness(parameter_vector, *args):
     quasi_static_states, _ = args
