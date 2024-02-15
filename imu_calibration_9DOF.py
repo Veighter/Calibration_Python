@@ -169,22 +169,32 @@ def main ():
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
-    # dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
+    
 
     indixes = quasi_static_coefficients > 0.98
 
-    quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
-    quasi_static_states = quasi_static_measurements
-    #print(f"Potenzielle statische Zustaende: {quasi_static_states}")
-    #calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
-    calibration_parameters = calibrate_sensor_lm("acc", quasi_static_measurements[:, 1:4])["x"]
     
-    calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+    quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements))  if indixes[i]] )
+    print(f"Anzahl Quasi-statischer-Zustaende: {len(quasi_static_measurements)}")
 
-    fig, [ax1,ax2] = plot.subplots(2,1)
-    ax1.plot(raw_measurements[:,0], calibrated_measurements)
-    ax2.plot(raw_measurements[:,0], raw_measurements[:,1:4])
+    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
+
+    fig, ax = plot.subplots(1,1)
+    ax.plot(raw_measurements[:, 0], indixes)
     plot.show()
+
+
+    # quasi_static_states = quasi_static_measurements
+    # #print(f"Potenzielle statische Zustaende: {quasi_static_states}")
+    # #calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
+    # calibration_parameters = calibrate_sensor_lm("acc", quasi_static_measurements[:, 1:4])["x"]
+    
+    # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+
+    # fig, [ax1,ax2] = plot.subplots(2,1)
+    # ax1.plot(raw_measurements[:,0], calibrated_measurements)
+    # ax2.plot(raw_measurements[:,0], raw_measurements[:,1:4])
+    # plot.show()
 
 if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ def plot_measurements_out_of_file():
         # TODO plot the raw measurements with matplotlib
         print('this')
 
-def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None):
+def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, shw_t=False):
     
     fig = plot.figure(tight_layout=True)
     gs = gridspec.GridSpec(3,1)
@@ -17,12 +17,22 @@ def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None):
     time -= time[0]
     time = time / (10e2)
 
-    if quasi_static_coefficients is not None:
+    if quasi_static_coefficients is not None and shw_t==True:
+        gs = gridspec.GridSpec(5,1)
+        ax4 = fig.add_subplot(gs[3,0])
+        ax4.plot(time, quasi_static_coefficients)
+        ax4.set_xlabel("t [s]")
+        ax4.set_title("Quasi-static-coefficients")
+        ax5 = fig.add_subplot(gs[4,0])
+        ax5.plot(time, quasi_static_coefficients>0.98)
+        ax5.set_title("Quasi-static-states")
+    if quasi_static_coefficients is not None and shw_t==False:
         gs = gridspec.GridSpec(4,1)
         ax4 = fig.add_subplot(gs[3,0])
         ax4.plot(time, quasi_static_coefficients)
         ax4.set_xlabel("t [s]")
         ax4.set_title("Quasi-static-coefficients")
+
 
     
     ax1 = fig.add_subplot(gs[0,0])
