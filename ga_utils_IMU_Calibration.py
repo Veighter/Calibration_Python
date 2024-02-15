@@ -22,6 +22,9 @@ Erklärung/ Terminologie
 import numpy as np
 import random as rd
 
+magnitude_acc_local = 1000.16106
+magnitude_mag_locla = 49.4006 # uTesla
+
 # [x] initialize population
 def init_population(search_space, population_size):
     dimension = np.shape(search_space)[0]
@@ -41,7 +44,7 @@ def evaluation(parameter_vectors, quasi_static_measurements, sensor):
                 new_cost += gyro_fitness()
         if sensor == "mag":
             for quasi_static_measurement in quasi_static_measurements:
-                new_cost += (1-np.linalg.norm()/49.4006) # norm by magnetic field at my position in same unit 
+                new_cost += mag_fitness() # norm by magnetic field at my position in same unit 
 
         cost.append(new_cost)
 
@@ -70,7 +73,7 @@ def evolution(parameter_vectors, dimension, quasi_static_measurements, sensor, c
     return np.array(new_population)
 
 def acc_fitness(parameter_vector, quasi_static_measurement):
-    return ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ quasi_static_measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+    return ((magnitude_acc_local)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ quasi_static_measurement.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
 
 def gyro_fitness():
     pass

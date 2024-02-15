@@ -5,8 +5,12 @@ import quasi_static_state_detector as qssd
 import numpy as np
 import math
 import pandas as pd
-
 from scipy.optimize import least_squares
+
+# get local magnitudes of magnetic field and acceleration at "https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm" and "https://www.ptb.de/cms/en/ptb/fachabteilungen/abt1/fb-11/fb-11-sis/g-extractor.html" 
+# https://www.mapcoordinates.net/de
+# 49,402.4 nT, 9.81158 m/s**2
+
 
 
 POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
@@ -50,7 +54,13 @@ def acc_fitness(parameter_vector, *args):
     print(f"Cost: {cost}")
     return np.array(cost)
 
-def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
+def mag_fitness(parameter_vector, *args):
+    pass
+
+def gyro_fitness(parameter_vector, *args):
+    pass
+
+def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
     if sensor == "acc":
         print(f"Calibration params: {calibration_params}")
