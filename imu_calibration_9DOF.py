@@ -18,8 +18,6 @@ SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,
 CROSSOVER_PROBABILITY = 0.9
 DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
 
-quasi_static_states = []
-
 
 def rectification(dataset):
     rectification = []
@@ -134,23 +132,23 @@ def calibrate_sensor_ga(quasi_static_measurements, sensor):
     if sensor == "gyro":
         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
 
-def calibrate_sensor_lm(sensor, initial_parameter_vector):
+def calibrate_sensor_lm(sensor, quasi_static_measurements):
     if sensor == "acc":
-        return least_squares(acc_fitness, initial_parameter_vector)
+        initial_parameter_vector = [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
+        return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000)
 
-def acc_fitness(parameter_vector):
+def acc_fitness(parameter_vector, *args):
+    quasi_static_states, _ = args
     cost = 0
-    print(len(quasi_static_states))
     for state in quasi_static_states:
         cost += ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ state.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
     print(f"Cost: {cost}")
     return np.array(cost)
 
 def get_calibrated_measurement(raw_measurements, calibration_params, sensor):
-
-
     calibrated_measurements = []
     if sensor == "acc":
+        print(f"Calibration params: {calibration_params}")
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
@@ -171,15 +169,15 @@ def main ():
 
     quasi_static_coefficients = determine_static_coefficients(raw_measurements)
 
-   # dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
+    # dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients)
 
     indixes = quasi_static_coefficients > 0.98
 
     quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements)) if indixes[i]])
     quasi_static_states = quasi_static_measurements
-    print(f"Potenzielle statische Zustaende: {len(quasi_static_measurements)}")
+    #print(f"Potenzielle statische Zustaende: {quasi_static_states}")
     #calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
-    calibration_parameters = calibrate_sensor_lm("acc", [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000])
+    calibration_parameters = calibrate_sensor_lm("acc", quasi_static_measurements[:, 1:4])["x"]
     
     calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
 
