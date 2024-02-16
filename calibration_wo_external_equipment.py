@@ -3,28 +3,42 @@
 
 import numpy as np
 
+sample_rate = 100
 
-def allan_variance(gyro_measurements, sample_rate):
+
+def parse_allan_variance(gyro_measurements):
+    collection_time = 3600 # time of static data collection in seconds
+    cutoff_sample = collection_time*sample_rate # data we would face if we sample at the sample rate for 1h
+    
+    return gyro_measurements[0:cutoff_sample]
+
+# [x] Allan Variance von Gyroskop Daten bestimmen -> gleich grosse Intervall wichtig
+def allan_variance(gyro_measurements):
     # one axis allan variance computing
     time_begin = 1 # begin time in s
-    time_end = 225 # end time in s
+    time_end = 400 # end time in s
     sample_time = 1/sample_rate
+    measurement_time = int(len(gyro_measurements)/100)
+
 
     num_elements = int((time_end - time_begin) / sample_time) + 1
+    times = [time for time in np.linspace(start=time_begin,stop=time_end,num=num_elements) if measurement_time%time==0]
 
-    times = [[time for time in np.linspace(start=time_begin,stop=time_end,num=num_elements)]]
+    allan_variance = np.zeros(shape=(len(times),))
 
-    measurement_time = int(len(gyro_measurements)/1000)
-
-    for time in times: # evenly space 0.1 Zeitsteps
-        allan_variance = np.zeros(shape=(1,len(times)))
-        K = int(measurement_time/time)
-        sample_number_intervall = time*sample_rate
-        for k in len(K):
-            left_bound = k*sample_number_intervall
-            right_bound = left_bound+sample_number_intervall # goes through the equal length intervalls
-            allan_variance+=(np.sum(gyro_measurements[right_bound+1, right_bound+1+sample_number_intervall])/sample_number_intervall-np.sum(gyro_measurements[left_bound, left_bound+sample_number_intervall])/sample_number_intervall)**2
-        allan_variance= allan_variance/(2*K)
+    for i, time in enumerate(times): # evenly space 0.1 Zeitsteps
+        K = int(measurement_time/float(time))
+        sample_number_intervall = (int)(time*sample_rate)
+        
+        for k in range(K-1):
+            left_bound = (int)(k*sample_number_intervall)
+            right_bound = (int)((k+1)*sample_number_intervall) # goes through the equal length intervalls
+            
+            average_1 = np.mean(gyro_measurements[left_bound: right_bound])
+            average_2 = np.mean(gyro_measurements[right_bound: right_bound+sample_number_intervall])
+            
+            allan_variance[i]+=(average_2-average_1)**2
+        allan_variance[i] /= (2*K)
 
     return (times, allan_variance)
 
@@ -44,7 +58,7 @@ def calibration_algorithm(raw_measurements, sample_rate):
     gyro_y = raw_measurements[:, 5]
     gyro_z = raw_measurements[:, 6]
 
-    t_init = allan_variance([time, gyro_x, gyro_y, gyro_z].T, sample_rate)
+    t_init = allan_variance(np.array([time, gyro_x, gyro_y, gyro_z]).T, sample_rate)
     pass
 
 

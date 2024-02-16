@@ -1,7 +1,8 @@
-
+import matplotlib.pyplot as plt
 import ga_utils_IMU_Calibration as ga
 import data_plotting_IMU_9DOF as dp
 import quasi_static_state_detector as qssd
+import calibration_wo_external_equipment as cwee
 import numpy as np
 import math
 import pandas as pd
@@ -71,25 +72,55 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
 
     return np.array(calibrated_measurements)
 
-
-
 def main ():
-    raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
+    #raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
+
+    raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_1.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
+
 
     raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
     raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
-    print(f"Anzahl Samples: {len(raw_measurements)}")    
+    allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
+    allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
+    allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
 
-    quasi_static_coefficients = qssd.determine_static_coefficients(raw_measurements)
+    time = raw_measurements[:,0]
+    fig, ax = plt.subplots(1,1)
+    ax.plot(allan_variance_x[0], allan_variance_x[1])
+    ax.plot(allan_variance_y[0], allan_variance_y[1])
+    ax.plot(allan_variance_z[0], allan_variance_z[1])
+    plt.show()
 
-    indixes = quasi_static_coefficients > 0.98
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #print(f"Anzahl Samples: {len(raw_measurements)}")    
+
+    #quasi_static_coefficients = qssd.determine_static_coefficients(raw_measurements)
+
+    #indixes = quasi_static_coefficients > 0.98
     
-    quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements))  if indixes[i]] )
-    print(f"Anzahl Quasi-statischer-Zustaende: {len(quasi_static_measurements)}")
+    #quasi_static_measurements = np.array([raw_measurements[i,:] for i in range(len(raw_measurements))  if indixes[i]] )
+    #print(f"Anzahl Quasi-statischer-Zustaende: {len(quasi_static_measurements)}")
 
-    dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients, shw_t=True)
+    #dp.plot_measurements_out_of_data(raw_measurements, quasi_static_coefficients, shw_t=True)
 
     # quasi_static_states = quasi_static_measurements
     # #print(f"Potenzielle statische Zustaende: {quasi_static_states}")
