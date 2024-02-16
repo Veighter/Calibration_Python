@@ -1,0 +1,8 @@
+Robust and Easy to Implement Method for IMUY Calibration Without External Equipments
+
+Procedure consists of 4 steps:
+1. Collecting Data from N static positions (Compare to the in "Automatic Calibration for Inertial Measurement Unit")
+2. Estimate T_init using the Allan Variance 
+    -> Difference of the averages in consecutive intervals
+3. Static Detector using Variance of Accelerometer Data
+4. Computing Params of Acc using the given Sensor Error Model with Scaling Error and Axis Misalignments + Biases (12 Unknown Parameters)
