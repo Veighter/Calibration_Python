@@ -73,14 +73,9 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     return np.array(calibrated_measurements)
 
 def main ():
-    #raw_measurements = get_measurements('../../Datalogs/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs
 
-    raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_1.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
-
-
-    raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
-    raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
-    raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
+    # Allan Variance
+    raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
 
     allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
     allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
@@ -94,8 +89,20 @@ def main ():
     plt.show()
 
 
+    # Static Detection
+    raw_measurements = get_measurements('../../Datalogs/IMU_0.txt')
 
+    raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
+    raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
+    raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
+    static_detector_list = cwee.static_detector(raw_measurements[:, 1:4], 150)
+
+    time = raw_measurements[:,0]
+    fig, ax = plt.subplots(1,1)
+    ax.plot(time, static_detector_list[0][0])
+    plt.show()
+    
 
 
 

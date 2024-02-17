@@ -43,49 +43,77 @@ def allan_variance(gyro_measurements):
 
     return (times, allan_variance)
 
-# TODO implement the static Detector
+# [x] implement the static Detector
 def static_detector(acc_dataset, T_init):
     M = [] # Matrix holding [Residual, Params_acc, threshold, s_intervals]
 
     sample_number_init_intervall = T_init*sample_rate
 
-    roh_init = detector_functional(acc_dataset[0:sample_number_init_intervall, :])
+    roh_init = static_detector_functional(acc_dataset[0:sample_number_init_intervall, :])
     
     sample_number_intervall = t_wait*sample_rate
     left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
     right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
 
 
-    for k in range(10):
+    for k in range(1,10):
         size_acc = len(acc_dataset)
         threshold = k*roh_init**2
-        static_intervals = np.zeros(shape = (size_acc,) )
+        static_detector_values = np.zeros(shape = (size_acc,) )
         for t, _ in enumerate(acc_dataset[left_bound: ,:], sample_number_init_intervall):
 
-            variance_magnitude = detector_functional(acc_dataset[left_bound:right_bound,:])
+            variance_magnitude = static_detector_functional(acc_dataset[left_bound:right_bound,:])
             if variance_magnitude< threshold:
-                static_intervals[t] = 1
+                static_detector_values[t] = 1
             if variance_magnitude >= threshold:
-                static_intervals[t] = 0
+                static_detector_values[t] = 0
             
             left_bound += 1
             right_bound += 1
 
             if right_bound>=size_acc:
                 break
-
-        M.append((static_intervals, threshold))      
+        
+        static_intervals = static_interval_detector(static_detector_values)
+        M.append((static_detector_values, threshold))      
     
 
     return M
 
-def detector_functional(acc_dataset):
+def static_detector_functional(acc_dataset):
     acc_x = acc_dataset[:,0]
     acc_y = acc_dataset[:,1]
     acc_z = acc_dataset[:,2]
     return np.linalg.norm([np.var(acc_x), np.var(acc_y), np.var(acc_z)])
 
-def optimize_lm(static_intervals, acc_dataset, t_wait):
+def static_interval_detector(static_detector_values):
+    static_intervals = [] # indixes of the M distinct intervalls of the window size t_wait
+    prior_value = False
+    left_bound = 0
+    right_bound = 0
+
+    for i in range(len(static_detector_values)):
+        if static_detector_values[i] != prior_value: # detect High and Lows, so static and non static intervals
+            prior_value = not(prior_value)
+            left_bound = i
+            i+=1
+            in_static_interval = True
+            number_of_static_samples = 1
+            while(in_static_interval and number_of_static_samples<t_wait*sample_rate and i<len(static_detector_values)):
+                if  static_detector_values[i] != prior_value:
+                    prior_value = not(prior_value)
+                    right_bound=i-1
+                    static_intervals.append((left_bound, right_bound))
+                number_of_static_samples+=1
+                i+=1
+    
+    return static_intervals
+
+
+# TODO implement the optimizer for the 12 parameters for the sensor error model with the levenberg marquard algorithnm
+def optimize_lm(acc_dataset, static_intervals, t_wait):
+    
+
     pass
 
 def calibration_algorithm(raw_measurements, sample_rate):
@@ -115,7 +143,7 @@ def calibration_algorithm(raw_measurements, sample_rate):
 
 
 
-
+# TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
 def acc_fitness():
     pass
 
