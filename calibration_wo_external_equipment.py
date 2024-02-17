@@ -3,7 +3,8 @@
 
 import numpy as np
 
-sample_rate = 100
+sample_rate = 100   # Hz
+t_wait = 2          # s
 
 
 def parse_allan_variance(gyro_measurements):
@@ -42,8 +43,49 @@ def allan_variance(gyro_measurements):
 
     return (times, allan_variance)
 
-def static_detector():
-    #return 1 if chi<threshold else 0
+# TODO implement the static Detector
+def static_detector(acc_dataset, T_init):
+    M = [] # Matrix holding [Residual, Params_acc, threshold, s_intervals]
+
+    sample_number_init_intervall = T_init*sample_rate
+
+    roh_init = detector_functional(acc_dataset[0:sample_number_init_intervall, :])
+    
+    sample_number_intervall = t_wait*sample_rate
+    left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
+    right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
+
+
+    for k in range(10):
+        size_acc = len(acc_dataset)
+        threshold = k*roh_init**2
+        static_intervals = np.zeros(shape = (size_acc,) )
+        for t, _ in enumerate(acc_dataset[left_bound: ,:], sample_number_init_intervall):
+
+            variance_magnitude = detector_functional(acc_dataset[left_bound:right_bound,:])
+            if variance_magnitude< threshold:
+                static_intervals[t] = 1
+            if variance_magnitude >= threshold:
+                static_intervals[t] = 0
+            
+            left_bound += 1
+            right_bound += 1
+
+            if right_bound>=size_acc:
+                break
+
+        M.append((static_intervals, threshold))      
+    
+
+    return M
+
+def detector_functional(acc_dataset):
+    acc_x = acc_dataset[:,0]
+    acc_y = acc_dataset[:,1]
+    acc_z = acc_dataset[:,2]
+    return np.linalg.norm([np.var(acc_x), np.var(acc_y), np.var(acc_z)])
+
+def optimize_lm(static_intervals, acc_dataset, t_wait):
     pass
 
 def calibration_algorithm(raw_measurements, sample_rate):
