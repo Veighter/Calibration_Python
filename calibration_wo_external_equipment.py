@@ -2,6 +2,10 @@
 # for statistic reasoning - damit das Intervall nicht statistisch zu viele Daten enthaelt - ist die Grenze 225s
 
 import numpy as np
+from scipy.optimize import least_squares
+
+magnitude_acc_local = 1000.16106 # mg
+magnitude_mag_locla = 49.4006 # uTesla
 
 sample_rate = 100   # Hz
 t_wait = 2          # s
@@ -45,21 +49,20 @@ def allan_variance(gyro_measurements):
 
 # [x] implement the static Detector
 def static_detector(acc_dataset, T_init):
-    M = [] # Matrix holding [Residual, Params_acc, threshold, s_intervals]
+    tuple_list = [] # tuple holding [threshold, s_detector_values]
 
     sample_number_init_intervall = T_init*sample_rate
 
     roh_init = static_detector_functional(acc_dataset[0:sample_number_init_intervall, :])
     
     sample_number_intervall = t_wait*sample_rate
-    left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
-    right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
-
-
-    for k in range(1,10):
+    
+    for k in range(1,10): # Anomalien, wenn das k>1 ist
         size_acc = len(acc_dataset)
         threshold = k*roh_init**2
         static_detector_values = np.zeros(shape = (size_acc,) )
+        left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
+        right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
         for t, _ in enumerate(acc_dataset[left_bound: ,:], sample_number_init_intervall):
 
             variance_magnitude = static_detector_functional(acc_dataset[left_bound:right_bound,:])
@@ -75,10 +78,10 @@ def static_detector(acc_dataset, T_init):
                 break
         
         static_intervals = static_interval_detector(static_detector_values)
-        M.append((static_detector_values, threshold))      
+        tuple_list.append((static_detector_values, threshold))      
     
 
-    return M
+    return tuple_list
 
 def static_detector_functional(acc_dataset):
     acc_x = acc_dataset[:,0]
@@ -88,33 +91,38 @@ def static_detector_functional(acc_dataset):
 
 def static_interval_detector(static_detector_values):
     static_intervals = [] # indixes of the M distinct intervalls of the window size t_wait
-    prior_value = False
-    left_bound = 0
-    right_bound = 0
+    static_samples_interval = t_wait*sample_rate
 
-    for i in range(len(static_detector_values)):
-        if static_detector_values[i] != prior_value: # detect High and Lows, so static and non static intervals
-            prior_value = not(prior_value)
+    i = 0
+    while i<(len(static_detector_values)):
+        if static_detector_values[i] != False:
             left_bound = i
-            i+=1
-            in_static_interval = True
-            number_of_static_samples = 1
-            while(in_static_interval and number_of_static_samples<t_wait*sample_rate and i<len(static_detector_values)):
-                if  static_detector_values[i] != prior_value:
-                    prior_value = not(prior_value)
-                    right_bound=i-1
-                    static_intervals.append((left_bound, right_bound))
-                number_of_static_samples+=1
+            right_bound = i+static_samples_interval # intervall length has to be t_wait
+            while(static_detector_values[i]==True):
                 i+=1
-    
+            if (i-1) >= right_bound:
+                static_intervals.append((left_bound, right_bound))
+        i+=1
+
     return static_intervals
 
-
 # TODO implement the optimizer for the 12 parameters for the sensor error model with the levenberg marquard algorithnm
-def optimize_lm(acc_dataset, static_intervals, t_wait):
+def optimize_lm(dataset, static_intervals_list):
+    opt_param = []
+    for static_intervals in static_intervals_list:
+        avg_measurements = []
+        for static_interval in static_intervals:
+            avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+            avg_measurements.append(avg_measurement)
+        initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
+        calibration_params = least_squares(acc_fitness, initial_parameter_vector, args=(avg_measurements, []), max_nfev=10000)
+        opt_param.append([calibration_params['x'], calibration_params['cost']])
+        
+    opt_param = np.array(opt_param)
+    min = np.argmin(opt_param[:,1])
     
 
-    pass
+    return opt_param[min,0]
 
 def calibration_algorithm(raw_measurements, sample_rate):
     time = raw_measurements[:, 0]
@@ -139,13 +147,19 @@ def calibration_algorithm(raw_measurements, sample_rate):
 
 
 
-
+def sensor_error_model_transformation(parameter_vector, static_measurement):
+    return np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ (static_measurement-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])).T
 
 
 
 # TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
-def acc_fitness():
-    pass
+def acc_fitness(parameter_vector, *args):
+    static_measurements, _ = args
+    residuals = np.zeros(len(static_measurements))
+    for i, measurement in enumerate(static_measurements):
+        residuals[i]= ((magnitude_acc_local)**2-np.linalg.norm(sensor_error_model_transformation(parameter_vector, measurement))**2)**2
+    return residuals
+    
 
 def gyro_fitness():
     pass

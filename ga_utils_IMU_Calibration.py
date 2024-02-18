@@ -22,7 +22,7 @@ Erklärung/ Terminologie
 import numpy as np
 import random as rd
 
-magnitude_acc_local = 1000.16106
+magnitude_acc_local = 1000.16106 # mg
 magnitude_mag_locla = 49.4006 # uTesla
 
 # [x] initialize population

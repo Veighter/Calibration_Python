@@ -32,8 +32,6 @@ def get_measurements(filepath):
     raw_measurements_df = pd.read_csv(filepath)
     return raw_measurements_df.to_numpy() 
 
-
-
 def calibrate_sensor_ga(quasi_static_measurements, sensor):
     if sensor == "acc":
         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_ACC, 1000, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
@@ -75,34 +73,47 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
 def main ():
 
     # Allan Variance
-    raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
+    # raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
 
-    allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
-    allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
-    allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
+    # allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
+    # allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
+    # allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
 
-    time = raw_measurements[:,0]
-    fig, ax = plt.subplots(1,1)
-    ax.plot(allan_variance_x[0], allan_variance_x[1])
-    ax.plot(allan_variance_y[0], allan_variance_y[1])
-    ax.plot(allan_variance_z[0], allan_variance_z[1])
-    plt.show()
+    # time = raw_measurements[:,0]
+    # fig, ax = plt.subplots(1,1)
+    # ax.plot(allan_variance_x[0], allan_variance_x[1])
+    # ax.plot(allan_variance_y[0], allan_variance_y[1])
+    # ax.plot(allan_variance_z[0], allan_variance_z[1])
+    # plt.show()
 
 
     # Static Detection
     raw_measurements = get_measurements('../../Datalogs/IMU_0.txt')
 
+    
     raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
     raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
-    static_detector_list = cwee.static_detector(raw_measurements[:, 1:4], 150)
+    time = (raw_measurements[:,0]-raw_measurements[0,0])/1000 # in sek
+    acc_measurements = raw_measurements[:,1:4]
+    gyro_measurements = raw_measurements[:,4:7]
+    mag_measurements = raw_measurements[:,7:10]
 
-    time = raw_measurements[:,0]
-    fig, ax = plt.subplots(1,1)
-    ax.plot(time, static_detector_list[0][0])
-    plt.show()
+    static_detector_values_list = cwee.static_detector(acc_measurements, 150)
+
+    static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
+
     
+    # fig, ax = plt.subplots(1,1)
+    # ax.plot(time, static_detector_values_list[2][0])
+    # plt.show()
+
+    opt_param = cwee.optimize_lm(acc_measurements, static_intervals_list=static_intervals)
+
+    print(f"Opt_Params: {opt_param}")
+    
+    print('some')
 
 
 
@@ -134,7 +145,7 @@ def main ():
     # #calibration_parameters = calibrate_sensor_ga(quasi_static_measurements[:, 1:4], "acc")
     # calibration_parameters = calibrate_sensor_lm("acc", quasi_static_measurements[:, 1:4])["x"]
     
-    # calibrated_measurements = get_calibrated_measurement(raw_measurements[:, 1:4], calibration_parameters, sensor="acc")
+    # calibrated_measurements = get_calibrated_measurement(acc_measurements, calibration_parameters, sensor="acc")
 
     # fig, [ax1,ax2] = plot.subplots(2,1)
     # ax1.plot(raw_measurements[:,0], calibrated_measurements)
