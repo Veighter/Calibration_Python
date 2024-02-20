@@ -49,7 +49,7 @@ def allan_variance(gyro_measurements):
 
 # [x] implement the static Detector
 def static_detector(acc_dataset, T_init):
-    tuple_list = [] # tuple holding [threshold, s_detector_values]
+    detector_threshold_tuples = [] # tuple holding [threshold, s_detector_values]
 
     sample_number_init_intervall = T_init*sample_rate
 
@@ -78,10 +78,10 @@ def static_detector(acc_dataset, T_init):
                 break
         
         static_intervals = static_interval_detector(static_detector_values)
-        tuple_list.append((static_detector_values, threshold))      
+        detector_threshold_tuples.append((static_detector_values, threshold))      
     
 
-    return tuple_list
+    return detector_threshold_tuples
 
 def static_detector_functional(acc_dataset):
     acc_x = acc_dataset[:,0]
@@ -106,8 +106,9 @@ def static_interval_detector(static_detector_values):
 
     return static_intervals
 
-# TODO implement the optimizer for the 12 parameters for the sensor error model with the levenberg marquard algorithnm
-def optimize_lm(dataset, static_intervals_list, sensor):
+# TODO implement the optimizer for the parameters for the sensor error model with the levenberg marquard algorithnm
+# TODO use the same threshold, default is min cost threshold accelerometer optimum
+def optimize_acc_lm(dataset, static_intervals_list, thresholds):
     opt_param = []
     max_nfev = 100000
     ftol=1e-10
@@ -118,20 +119,14 @@ def optimize_lm(dataset, static_intervals_list, sensor):
         for static_interval in static_intervals:
             avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
             avg_measurements.append(avg_measurement)
-        if sensor == 'acc':
-            initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
-            calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
-        if sensor == 'mag':
-            initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1,1,1 ,0, 0, 0] # 15 Params for the Matrix and the bias
-            calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
-        if sensor == 'gyro':
-            pass
+        initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
+        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
         opt_param.append((calibration_params['x'], calibration_params['cost']))
         
     costs = [cost for _, cost in opt_param]
     min_cost = costs.index(min(costs))
     
-    return opt_param[min_cost][0]
+    return opt_param[min_cost][0], thresholds[min_cost]
 
 def calibration_algorithm(raw_measurements, sample_rate):
     time = raw_measurements[:, 0]
@@ -183,3 +178,18 @@ def mag_residuals(parameter_vector, *args):
         residuals[i] = ((magnitude_mag_local)-np.linalg.norm(sensor_error_model_mag_transformation(parameter_vector, measurement)))**2
     return residuals
 
+def optimize_mag_lm(dataset, static_intervals, threshold):
+    opt_param = []
+    max_nfev = 100000
+    ftol=1e-10
+
+    avg_measurements = []
+    calibration_params = None
+
+    for static_interval in static_intervals:
+        avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+        avg_measurements.append(avg_measurement)
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1,1,1 ,0, 0, 0] # 15 Params for the Matrix and the bias
+    calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
+    
+    return calibration_params['x']

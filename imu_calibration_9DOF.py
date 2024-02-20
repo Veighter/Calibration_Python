@@ -102,13 +102,17 @@ def main ():
     static_detector_values_list = cwee.static_detector(acc_measurements, 150)
 
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
+    thresholds = [static_detector_values_list[i][1] for i in range(len(static_detector_values_list))]
 
     
     
 
-    opt_param_acc = cwee.optimize_lm(acc_measurements, static_intervals_list=static_intervals, sensor='acc')
+    opt_param_acc, threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds, sensor='acc')
+    opt_param_mag,_ = cwee.optimize_acc_lm(mag_measurements, static_intervals_list=static_intervals, thresholds=thresholds, sensor='mag')
+    
 
-    print(f"Opt_Params: {opt_param_acc}")
+    print(f"Opt_Params Accelerometer: {opt_param_acc}")
+    print(f"Opt_Params Magnetometer: {opt_param_acc}")
 
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
