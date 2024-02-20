@@ -106,11 +106,11 @@ def main ():
     
     
 
-    opt_param = cwee.optimize_lm(acc_measurements, static_intervals_list=static_intervals)
+    opt_param_acc = cwee.optimize_lm(acc_measurements, static_intervals_list=static_intervals, sensor='acc')
 
-    print(f"Opt_Params: {opt_param}")
+    print(f"Opt_Params: {opt_param_acc}")
 
-    calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param, "acc")
+    calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
 
     fig, [ax1, ax2] = plt.subplots(2,1)

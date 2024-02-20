@@ -107,15 +107,25 @@ def static_interval_detector(static_detector_values):
     return static_intervals
 
 # TODO implement the optimizer for the 12 parameters for the sensor error model with the levenberg marquard algorithnm
-def optimize_lm(dataset, static_intervals_list):
+def optimize_lm(dataset, static_intervals_list, sensor):
     opt_param = []
+    max_nfev = 100000
+    ftol=1e-10
+
     for static_intervals in static_intervals_list:
         avg_measurements = []
+        calibration_params = None
         for static_interval in static_intervals:
             avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
             avg_measurements.append(avg_measurement)
-        initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
-        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=100000, ftol=1e-10)
+        if sensor == 'acc':
+            initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
+            calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
+        if sensor == 'mag':
+            initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1,1,1 ,0, 0, 0] # 15 Params for the Matrix and the bias
+            calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
+        if sensor == 'gyro':
+            pass
         opt_param.append((calibration_params['x'], calibration_params['cost']))
         
     costs = [cost for _, cost in opt_param]
