@@ -66,7 +66,16 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
                 calibrated_measurements.append(theta@raw_measurement.T - bias)
-
+    if sensor == 'mag':
+        axis_misalignment_matrix = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
+        scaling_matrix = np.eye(3)
+        scaling_matrix[0,0]= calibration_params[9]
+        scaling_matrix[1,1]= calibration_params[10]
+        scaling_matrix[2,2]=calibration_params[11]
+        bias = np.array([calibration_params[12], calibration_params[13], calibration_params[14]])
+        for raw_measurement in raw_measurements:
+                calibrated_measurements.append(np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@(raw_measurement-bias))
+            
     return np.array(calibrated_measurements)
 
 def main ():
@@ -105,24 +114,65 @@ def main ():
     thresholds = [static_detector_values_list[i][1] for i in range(len(static_detector_values_list))]
 
     
-    
 
-    opt_param_acc, threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds, sensor='acc')
-    opt_param_mag,_ = cwee.optimize_acc_lm(mag_measurements, static_intervals_list=static_intervals, thresholds=thresholds, sensor='mag')
+    opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
+    opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)], threshold=opt_threshold)
     
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
-    print(f"Opt_Params Magnetometer: {opt_param_acc}")
+    print(f"Opt_Params Magnetometer: {opt_param_mag}")
 
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
 
-    fig, [ax1, ax2] = plt.subplots(2,1)
-    ax1.plot(time, calibrated_acc_measurements)
-    ax2.plot(time, acc_measurements)
-    plt.show()
-    
+    # fig, [ax1, ax2] = plt.subplots(2,1)
+    # ax1.plot(time, calibrated_acc_measurements)
+    # ax2.plot(time, acc_measurements)
+    # plt.show()
 
+
+    calibrated_mag_measurements = get_calibrated_measurements(mag_measurements, opt_param_mag, "mag")
+
+    
+    # fig, [ax1, ax2] = plt.subplots(2,1)
+    # ax1.plot(time,calibrated_mag_measurements)
+    # ax2.plot(time, mag_measurements)
+    # plt.show()
+
+    ## Plot 3D Scatter
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+
+    magnitude_mag_local = 49.4006 #T
+
+    ## Natuerlich nur die Punkte nutzen, welche geaveraget wurden!!!
+    # Das hier ist sinnlos
+    for mag_measurement in mag_measurements:
+
+        mag_x = mag_measurement[0]/magnitude_mag_local
+        mag_y = mag_measurement[1]/magnitude_mag_local
+        mag_z = mag_measurement[2]/magnitude_mag_local
+
+        ax.scatter(mag_x, mag_y, mag_z, color='r')
+
+    print("Mitte")
+
+    for cal_mag_measurement in calibrated_mag_measurements:
+        
+        cal_mag_x = cal_mag_measurement[0]/magnitude_mag_local
+        cal_mag_y = cal_mag_measurement[1]/magnitude_mag_local
+        cal_mag_z = cal_mag_measurement[2]/magnitude_mag_local
+
+        ax.scatter(cal_mag_x, cal_mag_y, cal_mag_z, color='b')
+
+    ax.set_title('3D Scatter Plot of Magnetometer Data')
+    ax.set_xlabel('X [uT]')
+    ax.set_ylabel('Y [uT]')
+    ax.set_ylabel('Z [uT]')
+
+    print("Vorher")
+    plt.show()
+    print("Nachher")
 
 
 
