@@ -62,7 +62,6 @@ def gyro_fitness(parameter_vector, *args):
 def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
     if sensor == "acc":
-        print(f"Calibration params: {calibration_params}")
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
@@ -105,15 +104,20 @@ def main ():
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
 
     
-    # fig, ax = plt.subplots(1,1)
-    # ax.plot(time, static_detector_values_list[2][0])
-    # plt.show()
+    
 
     opt_param = cwee.optimize_lm(acc_measurements, static_intervals_list=static_intervals)
 
     print(f"Opt_Params: {opt_param}")
+
+    calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param, "acc")
+
+
+    fig, [ax1, ax2] = plt.subplots(2,1)
+    ax1.plot(time, calibrated_acc_measurements)
+    ax2.plot(time, acc_measurements)
+    plt.show()
     
-    print('some')
 
 
 

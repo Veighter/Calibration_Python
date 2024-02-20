@@ -115,14 +115,13 @@ def optimize_lm(dataset, static_intervals_list):
             avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
             avg_measurements.append(avg_measurement)
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
-        calibration_params = least_squares(acc_fitness, initial_parameter_vector, args=(avg_measurements, []), max_nfev=10000)
-        opt_param.append([calibration_params['x'], calibration_params['cost']])
+        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=100000, ftol=1e-10)
+        opt_param.append((calibration_params['x'], calibration_params['cost']))
         
-    opt_param = np.array(opt_param)
-    min = np.argmin(opt_param[:,1])
+    costs = [cost for _, cost in opt_param]
+    min_cost = costs.index(min(costs))
     
-
-    return opt_param[min,0]
+    return opt_param[min_cost][0]
 
 def calibration_algorithm(raw_measurements, sample_rate):
     time = raw_measurements[:, 0]
@@ -139,31 +138,22 @@ def calibration_algorithm(raw_measurements, sample_rate):
     t_init = allan_variance(np.array([time, gyro_x, gyro_y, gyro_z]).T, sample_rate)
     pass
 
-
-
-
-
-
-
-
-
-def sensor_error_model_transformation(parameter_vector, static_measurement):
+def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
     return np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ (static_measurement-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])).T
 
-
-
 # TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
-def acc_fitness(parameter_vector, *args):
+def acc_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
     for i, measurement in enumerate(static_measurements):
-        residuals[i]= ((magnitude_acc_local)**2-np.linalg.norm(sensor_error_model_transformation(parameter_vector, measurement))**2)**2
+        residuals[i]= ((magnitude_acc_local)**2-np.linalg.norm(sensor_error_model_acc_transformation(parameter_vector, measurement))**2)**2
     return residuals
     
 
 def gyro_fitness():
     pass
 
-def mag_fitness():
+def mag_residuals(parameter_vector, *args):
+    
     pass
 
