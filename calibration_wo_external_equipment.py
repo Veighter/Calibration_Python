@@ -5,7 +5,7 @@ import numpy as np
 from scipy.optimize import least_squares
 
 magnitude_acc_local = 1000.16106 # mg
-magnitude_mag_locla = 49.4006 # uTesla
+(magnitude_mag_local) = 49.4006 # uTesla
 
 sample_rate = 100   # Hz
 t_wait = 2          # s
@@ -139,8 +139,21 @@ def calibration_algorithm(raw_measurements, sample_rate):
     pass
 
 def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
-    return np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ (static_measurement-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])).T
+    axis_misalignment_and_scaling_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    bias = np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])
+    return axis_misalignment_and_scaling_matrix @ (static_measurement-bias).T
 
+# axis misalignment, without cross axis scaling!!
+def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
+    axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    scaling_matrix = np.eye(3)
+    scaling_matrix[0,0]=parameter_vector[9]
+    scaling_matrix[1,1]=parameter_vector[10]
+    scaling_matrix[2,2]=parameter_vector[11]
+
+    bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
+    
+    return np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@(static_measurement-bias).T
 # TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
 def acc_residuals(parameter_vector, *args):
     static_measurements, _ = args
@@ -154,6 +167,9 @@ def gyro_fitness():
     pass
 
 def mag_residuals(parameter_vector, *args):
-    
-    pass
+    static_measurements = args
+    residuals = np.zeros(len(static_measurements))
+    for i, measurement in enumerate(static_measurements):
+        residuals[i] = ((magnitude_mag_local)-np.linalg.norm(sensor_error_model_mag_transformation(parameter_vector, measurement)))**2
+    return residuals
 
