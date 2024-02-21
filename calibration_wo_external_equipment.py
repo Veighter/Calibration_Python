@@ -77,7 +77,6 @@ def static_detector(acc_dataset, T_init):
             if right_bound>=size_acc:
                 break
         
-        static_intervals = static_interval_detector(static_detector_values)
         detector_threshold_tuples.append((static_detector_values, threshold))      
     
 
@@ -117,8 +116,9 @@ def optimize_acc_lm(dataset, static_intervals_list, thresholds):
         avg_measurements = []
         calibration_params = None
         for static_interval in static_intervals:
-            avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+            avg_measurement = avg_measurements_static_interval(dataset, static_interval)
             avg_measurements.append(avg_measurement)
+        print(avg_measurements)
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
         calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
         opt_param.append((calibration_params['x'], calibration_params['cost']))
@@ -127,6 +127,9 @@ def optimize_acc_lm(dataset, static_intervals_list, thresholds):
     min_cost = costs.index(min(costs))
     
     return opt_param[min_cost][0], thresholds[min_cost]
+
+def avg_measurements_static_interval(dataset, static_interval):
+    return np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
 
 def calibration_algorithm(raw_measurements, sample_rate):
     time = raw_measurements[:, 0]
