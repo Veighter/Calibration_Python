@@ -5,10 +5,10 @@ import numpy as np
 from scipy.optimize import least_squares
 
 magnitude_acc_local = 1000.16106 # mg
-magnitude_mag_local = 49.4006 # uTesla
+magnitude_mag_local = 49.4006 # uTesla 18.2
 
 sample_rate = 100   # Hz
-t_wait = 2          # s
+t_wait = 1          # s
 
 
 def parse_allan_variance(gyro_measurements):
@@ -89,9 +89,13 @@ def static_detector_functional(acc_dataset):
     return np.linalg.norm([np.var(acc_x), np.var(acc_y), np.var(acc_z)])
 
 def static_interval_detector(static_detector_values):
-    static_intervals = [] # indixes of the M distinct intervalls of the window size t_wait
+    static_intervals = [] 
     static_samples_interval = t_wait*sample_rate
 
+    flag = 0
+
+    if static_detector_values[0]== True:
+        flag=1
     i = 0
     while i<(len(static_detector_values)):
         if static_detector_values[i] != False:
@@ -118,9 +122,8 @@ def optimize_acc_lm(dataset, static_intervals_list, thresholds):
         for static_interval in static_intervals:
             avg_measurement = avg_measurements_static_interval(dataset, static_interval)
             avg_measurements.append(avg_measurement)
-        print(avg_measurements)
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
-        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
+        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, method='lm')
         opt_param.append((calibration_params['x'], calibration_params['cost']))
         
     costs = [cost for _, cost in opt_param]
@@ -149,20 +152,8 @@ def calibration_algorithm(raw_measurements, sample_rate):
 def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
     axis_misalignment_and_scaling_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     bias = np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])
-    return axis_misalignment_and_scaling_matrix @ (static_measurement-bias).T
+    return (axis_misalignment_and_scaling_matrix @ static_measurement.T) -bias.T
 
-# axis misalignment, without cross axis scaling!!
-def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
-    axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
-    scaling_matrix = np.eye(3)
-    scaling_matrix[0,0]=parameter_vector[9]
-    scaling_matrix[1,1]=parameter_vector[10]
-    scaling_matrix[2,2]=parameter_vector[11]
-
-    bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
-    inverse = np.linalg.inv(axis_misalignment_matrix)
-
-    return inverse@scaling_matrix@axis_misalignment_matrix@(static_measurement-bias).T
 # TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
 def acc_residuals(parameter_vector, *args):
     static_measurements, _ = args
@@ -175,25 +166,50 @@ def acc_residuals(parameter_vector, *args):
 def gyro_fitness():
     pass
 
+
+def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
+    axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    scaling_matrix = np.eye(3)
+    scaling_matrix[0,0]=parameter_vector[9]
+    scaling_matrix[1,1]=parameter_vector[10]
+    scaling_matrix[2,2]=parameter_vector[11]
+    bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
+    inverse = np.linalg.inv(axis_misalignment_matrix)
+    return (inverse@scaling_matrix@axis_misalignment_matrix@static_measurement.T)-bias.T
+
 def mag_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
     for i, measurement in enumerate(static_measurements):
-        residuals[i] = ((magnitude_mag_local)-np.linalg.norm(sensor_error_model_mag_transformation(parameter_vector, measurement)))**2
+        transformation = sensor_error_model_mag_transformation(parameter_vector, np.array(measurement))
+        transformation_norm = np.linalg.norm(transformation)
+        residuals[i] = ((magnitude_mag_local)-transformation_norm)**2
     return residuals
 
-def optimize_mag_lm(dataset, static_intervals, threshold):
-    opt_param = []
-    max_nfev = 100000
+def optimize_mag_lm(dataset, static_intervals):
+    max_nfev = 1000000
     ftol=1e-10
 
     avg_measurements = []
     calibration_params = None
 
     for static_interval in static_intervals:
-        avg_measurement = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+        avg_measurement = avg_measurements_static_interval(dataset, static_interval)
         avg_measurements.append(avg_measurement)
-    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1,1,1 ,0, 0, 0] # 15 Params for the Matrix and the bias
-    calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol)
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1,0, 0, 0] # 15 Params for the Matrix and the bias
+    calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
     
     return calibration_params['x']
+
+
+
+
+
+ # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    # scaling_matrix = np.eye(3)
+    # scaling_matrix[0,0]=parameter_vector[9]
+    # scaling_matrix[1,1]=parameter_vector[10]
+    # scaling_matrix[2,2]=parameter_vector[11]
+    # bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
+    # inverse = np.linalg.inv(axis_misalignment_matrix)
+    #return inverse@scaling_matrix@axis_misalignment_matrix@(static_measurement-bias).T
