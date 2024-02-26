@@ -11,19 +11,19 @@ sample_rate = 100   # Hz
 t_wait = 1          # s
 
 
-def parse_allan_variance(gyro_measurements):
+def parse_allan_variance(w):
     collection_time = 3600 # time of static data collection in seconds
     cutoff_sample = collection_time*sample_rate # data we would face if we sample at the sample rate for 1h
     
-    return gyro_measurements[0:cutoff_sample]
+    return w[0:cutoff_sample]
 
 # [x] Allan Variance von Gyroskop Daten bestimmen -> gleich grosse Intervall wichtig
-def allan_variance(gyro_measurements):
+def allan_variance(w):
     # one axis allan variance computing
     time_begin = 1 # begin time in s
     time_end = 400 # end time in s
     sample_time = 1/sample_rate
-    measurement_time = int(len(gyro_measurements)/100)
+    measurement_time = int(len(w)/100)
 
 
     num_elements = int((time_end - time_begin) / sample_time) + 1
@@ -39,8 +39,8 @@ def allan_variance(gyro_measurements):
             left_bound = (int)(k*sample_number_intervall)
             right_bound = (int)((k+1)*sample_number_intervall) # goes through the equal length intervalls
             
-            average_1 = np.mean(gyro_measurements[left_bound: right_bound])
-            average_2 = np.mean(gyro_measurements[right_bound: right_bound+sample_number_intervall])
+            average_1 = np.mean(w[left_bound: right_bound])
+            average_2 = np.mean(w[right_bound: right_bound+sample_number_intervall])
             
             allan_variance[i]+=(average_2-average_1)**2
         allan_variance[i] /= (2*K)
@@ -48,24 +48,24 @@ def allan_variance(gyro_measurements):
     return (times, allan_variance)
 
 # [x] implement the static Detector
-def static_detector(acc_dataset, T_init):
+def static_detector(a, T_init):
     detector_threshold_tuples = [] # tuple holding [threshold, s_detector_values]
 
     sample_number_init_intervall = T_init*sample_rate
 
-    roh_init = static_detector_functional(acc_dataset[0:sample_number_init_intervall, :])
+    roh_init = static_detector_functional(a[0:sample_number_init_intervall, :])
     
     sample_number_intervall = t_wait*sample_rate
     
     for k in range(1,10): # Anomalien, wenn das k>1 ist
-        size_acc = len(acc_dataset)
+        size_acc = len(a)
         threshold = k*roh_init**2
         static_detector_values = np.zeros(shape = (size_acc,) )
         left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
         right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
-        for t, _ in enumerate(acc_dataset[left_bound: ,:], sample_number_init_intervall):
+        for t, _ in enumerate(a[left_bound: ,:], sample_number_init_intervall):
 
-            variance_magnitude = static_detector_functional(acc_dataset[left_bound:right_bound,:])
+            variance_magnitude = static_detector_functional(a[left_bound:right_bound,:])
             if variance_magnitude< threshold:
                 static_detector_values[t] = 1
             if variance_magnitude >= threshold:
@@ -82,10 +82,10 @@ def static_detector(acc_dataset, T_init):
 
     return detector_threshold_tuples
 
-def static_detector_functional(acc_dataset):
-    acc_x = acc_dataset[:,0]
-    acc_y = acc_dataset[:,1]
-    acc_z = acc_dataset[:,2]
+def static_detector_functional(a):
+    acc_x = a[:,0]
+    acc_y = a[:,1]
+    acc_z = a[:,2]
     return np.linalg.norm([np.var(acc_x), np.var(acc_y), np.var(acc_z)])
 
 def static_interval_detector(static_detector_values):
@@ -107,7 +107,7 @@ def static_interval_detector(static_detector_values):
 
 # TODO implement the optimizer for the parameters for the sensor error model with the levenberg marquard algorithnm
 # TODO use the same threshold, default is min cost threshold accelerometer optimum
-def optimize_acc_lm(dataset, static_intervals_list, thresholds):
+def optimize_acc_lm(a, static_intervals_list, thresholds):
     opt_param = []
     max_nfev = 100000
     ftol=1e-10
@@ -115,9 +115,7 @@ def optimize_acc_lm(dataset, static_intervals_list, thresholds):
     for static_intervals in static_intervals_list:
         avg_measurements = []
         calibration_params = None
-        for static_interval in static_intervals:
-            avg_measurement = avg_measurements_static_interval(dataset, static_interval)
-            avg_measurements.append(avg_measurement)
+        avg_measurements = avg_measurements_static_interval(a, static_intervals)
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
         calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, method='lm')
         opt_param.append((calibration_params['x'], calibration_params['cost']))
@@ -127,8 +125,12 @@ def optimize_acc_lm(dataset, static_intervals_list, thresholds):
     
     return opt_param[min_cost][0], thresholds[min_cost]
 
-def avg_measurements_static_interval(dataset, static_interval):
-    return np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+def avg_measurements_static_interval(dataset, static_intervals):
+    avg_meas = []
+    for static_interval in static_intervals:
+        meas_avg = np.mean(dataset[static_interval[0]:static_interval[1]+1, :], axis=0)
+        avg_meas.append(meas_avg)
+    return np.array(avg_meas)
 
 def calibration_algorithm(raw_measurements, sample_rate):
     time = raw_measurements[:, 0]
@@ -146,9 +148,9 @@ def calibration_algorithm(raw_measurements, sample_rate):
     pass
 
 def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
-    axis_misalignment_and_scaling_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
-    bias = np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])
-    return (axis_misalignment_and_scaling_matrix @ static_measurement.T) -bias.T
+    Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    b = np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])
+    return (Theta @ static_measurement.T) -b.T
 
 # TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
 def acc_residuals(parameter_vector, *args):
@@ -188,31 +190,37 @@ def mag_residuals(parameter_vector, *args):
         residuals[i] = (1-transformation_norm)**2
     return np.sum(residuals)
 
-def optimize_mag_lm(dataset, static_intervals):
+def optimize_mag_lm(m, static_intervals):
     max_nfev = 1000000
     ftol=1e-10
 
     avg_measurements = []
 
-    for static_interval in static_intervals:
-        avg_measurement = avg_measurements_static_interval(dataset, static_interval)
-        avg_measurements.append(avg_measurement)
+    avg_measurements = avg_measurements_static_interval(m, static_intervals)
     initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] # 15 Params for the Matrix and the bias
     calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
     
     return calibration_params['x']
 
-def optimize_mag_diff_ev(dataset, static_intervals):
+def optimize_mag_diff_ev(m, static_intervals):
     avg_measurements = []
 
-    for static_interval in static_intervals:
-        avg_measurement = avg_measurements_static_interval(dataset, static_interval)
-        avg_measurements.append(avg_measurement)
+    avg_measurements = avg_measurements_static_interval(m, static_intervals)
 
     bounds = [(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-1000, 1000),(-1000, 1000),(-1000, 1000)]
     result = differential_evolution(mag_residuals, args=(avg_measurements,[]), bounds=bounds,maxiter=10000)
     return result['x']
 
+
+
+def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
+    b_w = np.mean(w[0:T_init*sample_rate, :], axis=0)
+    w_b_free = w - b_w
+
+
+
+
+    pass
 
 
 
