@@ -2,7 +2,7 @@
 # for statistic reasoning - damit das Intervall nicht statistisch zu viele Daten enthaelt - ist die Grenze 225s
 
 import numpy as np
-from scipy.optimize import least_squares
+from scipy.optimize import least_squares, differential_evolution
 
 magnitude_acc_local = 1000.16106 # mg
 magnitude_mag_local = 49.4006 # uTesla 18.2
@@ -91,11 +91,7 @@ def static_detector_functional(acc_dataset):
 def static_interval_detector(static_detector_values):
     static_intervals = [] 
     static_samples_interval = t_wait*sample_rate
-
-    flag = 0
-
-    if static_detector_values[0]== True:
-        flag=1
+    
     i = 0
     while i<(len(static_detector_values)):
         if static_detector_values[i] != False:
@@ -159,7 +155,7 @@ def acc_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
     for i, measurement in enumerate(static_measurements):
-        residuals[i]= ((magnitude_acc_local)**2-np.linalg.norm(sensor_error_model_acc_transformation(parameter_vector, measurement))**2)**2
+        residuals[i]= ((magnitude_acc_local)-np.linalg.norm(sensor_error_model_acc_transformation(parameter_vector, measurement)))
     return residuals
     
 
@@ -168,38 +164,54 @@ def gyro_fitness():
 
 
 def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
-    axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
-    scaling_matrix = np.eye(3)
-    scaling_matrix[0,0]=parameter_vector[9]
-    scaling_matrix[1,1]=parameter_vector[10]
-    scaling_matrix[2,2]=parameter_vector[11]
-    bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
-    inverse = np.linalg.inv(axis_misalignment_matrix)
-    return (inverse@scaling_matrix@axis_misalignment_matrix@static_measurement.T)-bias.T
+    # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    # scaling_matrix = np.eye(3)
+    # scaling_matrix[0,0]=parameter_vector[9]
+    # scaling_matrix[1,1]=parameter_vector[10]
+    # scaling_matrix[2,2]=parameter_vector[11]
+    # bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
+    # inverse = np.linalg.inv(axis_misalignment_matrix)
+    # return (inverse@scaling_matrix@axis_misalignment_matrix@static_measurement.T)-bias.T
+    A = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    b = np.array([parameter_vector[9],parameter_vector[10], parameter_vector[11]])
+
+    return A@static_measurement-b
+
+
 
 def mag_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
     for i, measurement in enumerate(static_measurements):
-        transformation = sensor_error_model_mag_transformation(parameter_vector, np.array(measurement))
+        transformation = sensor_error_model_mag_transformation(parameter_vector, measurement)
         transformation_norm = np.linalg.norm(transformation)
-        residuals[i] = ((magnitude_mag_local)-transformation_norm)**2
-    return residuals
+        residuals[i] = (1-transformation_norm)**2
+    return np.sum(residuals)
 
 def optimize_mag_lm(dataset, static_intervals):
     max_nfev = 1000000
     ftol=1e-10
 
     avg_measurements = []
-    calibration_params = None
 
     for static_interval in static_intervals:
         avg_measurement = avg_measurements_static_interval(dataset, static_interval)
         avg_measurements.append(avg_measurement)
-    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1,0, 0, 0] # 15 Params for the Matrix and the bias
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] # 15 Params for the Matrix and the bias
     calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
     
     return calibration_params['x']
+
+def optimize_mag_diff_ev(dataset, static_intervals):
+    avg_measurements = []
+
+    for static_interval in static_intervals:
+        avg_measurement = avg_measurements_static_interval(dataset, static_interval)
+        avg_measurements.append(avg_measurement)
+
+    bounds = [(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-1000, 1000),(-1000, 1000),(-1000, 1000)]
+    result = differential_evolution(mag_residuals, args=(avg_measurements,[]), bounds=bounds,maxiter=10000)
+    return result['x']
 
 
 

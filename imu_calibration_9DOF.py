@@ -8,6 +8,9 @@ import math
 import pandas as pd
 from scipy.optimize import least_squares
 
+
+
+
 # get local magnitudes of magnetic field and acceleration at "https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm" and "https://www.ptb.de/cms/en/ptb/fachabteilungen/abt1/fb-11/fb-11-sis/g-extractor.html" 
 # https://www.mapcoordinates.net/de
 # 49,402.4 nT, 9.81158 m/s**2
@@ -66,16 +69,24 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
                 calibrated_measurements.append((theta@raw_measurement.T) - bias.T)
-    if sensor == 'mag':
-        axis_misalignment_matrix = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
-        scaling_matrix = np.eye(3)
-        scaling_matrix[0,0]= calibration_params[9]
-        scaling_matrix[1,1]= calibration_params[10]
-        scaling_matrix[2,2]=calibration_params[11]
-        bias = np.array([calibration_params[12], calibration_params[13], calibration_params[14]])
+    # if sensor == 'mag':
+    #     axis_misalignment_matrix = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
+    #     scaling_matrix = np.eye(3)
+    #     scaling_matrix[0,0]= calibration_params[9]
+    #     scaling_matrix[1,1]= calibration_params[10]
+    #     scaling_matrix[2,2]=calibration_params[11]
+    #     bias = np.array([calibration_params[12], calibration_params[13], calibration_params[14]])
+    #     for raw_measurement in raw_measurements:
+    #             calibrated_measurements.append((np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@raw_measurement.T)-bias.T)
+    if sensor == 'mag':    
+      #  Define calibration parameters
+        A = np.array(   [[0.941657, -0.005734, -0.004382],
+                        [-0.005734, 0.989327, 0.011440],
+                        [-0.004382, 0.011440, 0.949412]])
+        b = np.array([-21.348454, 15.020109, 60.648129])
+        
         for raw_measurement in raw_measurements:
-                calibrated_measurements.append((np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@raw_measurement.T)-bias.T)
-            
+            calibrated_measurements.append(A@(raw_measurement-b).T)
     return np.array(calibrated_measurements)
 
 def main ():
@@ -116,15 +127,18 @@ def main ():
     
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
-    opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+   # opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+   # opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     avg_measurements_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_interval) for static_interval in static_intervals[thresholds.index(opt_threshold)]])
 
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
-    print(f"Opt_Params Magnetometer: {opt_param_mag}")
+  #  print(f"Opt_Params Magnetometer: {opt_param_mag}")
     #print(f"Avg_measurements in Interval: {avg_measurements_opt_static_interval}")
 
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
+
+    opt_param_mag = None
     calibrated_avg_mag_measurements = get_calibrated_measurements(avg_measurements_opt_static_interval, opt_param_mag,"mag")
 
     # fig, [ax1, ax2] = plt.subplots(2,1)
@@ -190,7 +204,6 @@ def main ():
         mag_z = avg_measurement[2]
         ax.scatter(mag_x, mag_y, mag_z, color='r')
 
-  
     for calibrated_avg_mag_measurement in calibrated_avg_mag_measurements:
 
         cal_mag_x = calibrated_avg_mag_measurement[0]
@@ -198,6 +211,12 @@ def main ():
         cal_mag_z = calibrated_avg_mag_measurement[2]
 
         ax.scatter(cal_mag_x, cal_mag_y, cal_mag_z, color='b')
+
+    # with open("cal_mag_avg_measurements.txt", "w") as file:
+    #     file.write(str(calibrated_avg_mag_measurements))
+        
+    # with open("mag_avg_measurements", "w") as file:
+    #     file.write(str(avg_measurements_opt_static_interval))
 
     ax.set_title('3D Scatter Plot of Magnetometer Data')
     ax.set_xlabel('X [uT]')
@@ -207,6 +226,29 @@ def main ():
     plt.show()
 
 
+
+# # Randfall rechts fehlt!!
+# def static_interval_detector(static_detector_values):
+#     static_intervals = [] 
+#     static_samples_interval = t_wait*sample_rate
+
+#     left_bound = 0
+#     right_bound = 0
+#     flag = 0
+
+#     i = 0
+#     while i<(len(static_detector_values)):
+#         if static_detector_values[i] == True and flag == 0:
+#             flag = 1
+#             left_bound = i
+#         if static_detector_values[i] == False and flag ==1:
+#             flag = 0
+#             right_bound = i
+#             if right_bound-left_bound+1>=static_samples_interval:
+#                 static_intervals.append((left_bound, right_bound))
+#         i+=1
+
+#     return static_intervals
 
 
 
