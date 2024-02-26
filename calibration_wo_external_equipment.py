@@ -197,7 +197,7 @@ def optimize_mag_lm(m, static_intervals):
     avg_measurements = []
 
     avg_measurements = avg_measurements_static_interval(m, static_intervals)
-    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] # 15 Params for the Matrix and the bias
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] # 12 Params for the Matrix and the bias
     calibration_params = least_squares(mag_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
     
     return calibration_params['x']
@@ -214,13 +214,19 @@ def optimize_mag_diff_ev(m, static_intervals):
 
 
 def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
+    max_nfev = 1000000
+    ftol=1e-10
+
     b_w = np.mean(w[0:T_init*sample_rate, :], axis=0)
     w_b_free = w - b_w
 
+    a_0_avg = avg_measurements_static_interval(a_O, static_intervals)
+    m_0_avg = avg_measurements_static_interval(m_O, static_intervals)
 
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] 
+    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_0_avg, m_0_avg), max_nfev=100000, ftol=ftol, verbose=1, method='lm')
 
-
-    pass
+    return calibration_params['x']
 
 
 
