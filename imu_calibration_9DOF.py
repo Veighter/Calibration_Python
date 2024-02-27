@@ -124,21 +124,29 @@ def main ():
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
     thresholds = [static_detector_values_list[i][1] for i in range(len(static_detector_values_list))]
 
-    
+    # with open("gyro_measurements.txt", "w") as file:
+    #     file.write(str(gyro_measurements[20413:20450,:]))
+
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
    # opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
    # opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-    avg_measurements_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_interval) for static_interval in static_intervals[thresholds.index(opt_threshold)]])
+    avg_measurements_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
 
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
   #  print(f"Opt_Params Magnetometer: {opt_param_mag}")
     #print(f"Avg_measurements in Interval: {avg_measurements_opt_static_interval}")
 
+    return 0
+
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
+
     opt_param_mag = None
+    calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
+
+    
     calibrated_avg_mag_measurements = get_calibrated_measurements(avg_measurements_opt_static_interval, opt_param_mag,"mag")
 
     # fig, [ax1, ax2] = plt.subplots(2,1)

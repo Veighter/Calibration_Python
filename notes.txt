@@ -6,3 +6,13 @@ Procedure consists of 4 steps:
     -> Difference of the averages in consecutive intervals
 3. Static Detector using Variance of Accelerometer Data
 4. Computing Params of Acc using the given Sensor Error Model with Scaling Error and Axis Misalignments + Biases (12 Unknown Parameters)
+
+
+27.2
+Benutze die vorliegenen Kalibrierten AVG Messwerte. Ausgangsorientierung der Messwerte ist das Quaternion=(1,0,0,0). 
+Update des Ausgangsquaternions inkrementell mit den vorgegebenen Gyroskopwerten und der 
+Formel aus Automatic Calibration of ...
+Dann abgleich. 
+Plot des Inkrements des Quaternion zur Verifizierung. (Punkt muss um eine Drehachse irgendwo hin wandern)
+Reicht(wenn es fuer das erste Intervall gemacht wird)
+- Benutzen der Bibliothek quaternion um Umrechnungen leichter zu machen -> Rotationsmatrix aus Quaternion!!

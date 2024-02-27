@@ -1,7 +1,8 @@
 # halbe stunde daten sammeln, entspricht bei einer sample-Frequenz von 100 Hz 180000 samplen
-# for statistic reasoning - damit das Intervall nicht statistisch zu viele Daten enthaelt - ist die Grenze 225s
+# for statistic reasoning - damit das Intervall nicht statistisch zu viele Daten enthaelt - ist die Grenze 225s -> ueberworfen, siehe parse allan variance
 
 import numpy as np
+import quaternion
 from scipy.optimize import least_squares, differential_evolution
 
 magnitude_acc_local = 1000.16106 # mg
@@ -100,6 +101,7 @@ def static_interval_detector(static_detector_values):
             while(static_detector_values[i]==True):
                 i+=1
             if (i-1) >= right_bound:
+                right_bound=i-1 # wenn die Ergebnisse falsch werden, dann diesen Punkt raus machen, bzw nochmal in der Software der Italiener nachschauen (zentralisierung um t_wait noch nicht ganz verstanden)
                 static_intervals.append((left_bound, right_bound))
         i+=1
 
@@ -223,13 +225,58 @@ def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
     a_0_avg = avg_measurements_static_interval(a_O, static_intervals)
     m_0_avg = avg_measurements_static_interval(m_O, static_intervals)
 
-    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1,0, 0, 0] 
-    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_0_avg, m_0_avg), max_nfev=100000, ftol=ftol, verbose=1, method='lm')
+    initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1] 
+    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_0_avg, m_0_avg, w_b_free, static_intervals), max_nfev=100000, ftol=ftol, verbose=1, method='lm')
 
     return calibration_params['x']
 
 
+def gyro_residuals(parameter_vector, *args):
+    a_O_avg, m_O_avg, w_b_free, static_intervals = args
 
+    w_uncalibrated_b_free = []
+
+    for i in range(len(static_intervals)):
+
+        if i > 0:
+            a_k_1 = a_O_avg[i-1]
+            m_k_1 = m_O_avg[i-1]
+            a_k = a_O_avg[i]
+            m_k = m_O_avg[i]
+            motion_interval_bound_left = static_intervals[i-1][1]
+            motion_interval_bound_right = static_intervals[i][0]
+        
+        w_k_1_to_k = w_b_free[motion_interval_bound_left:motion_interval_bound_right, :]
+
+        R = quaternion_rotation(parameter_vector, w_k_1_to_k)
+
+
+    
+
+    
+
+# vllt ist hier die Dimension nicht richtig!!
+def sensor_error_model_gyro_transformation(parameter_vector, w):
+    Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
+    return Theta@w.T
+
+def quaternion_rotation(parameter_vector, w):
+    w_bar = sensor_error_model_gyro_transformation(parameter_vector, w)
+
+    q_t = np,quaternion(1,0,0,0)
+
+    for meas in w:
+        w_x=meas[0]
+        w_y=meas[1]
+        w_z=meas[2]
+
+        # Equation (8) aus "Automatic Calibration IMU"
+        q_t = q_t+1./2*quaternion(-w_x*q_t.x-w_y*q_t.y-w_z*q_t.z, w_x*q_t.w+w_z*q_t.y-w_y*q_t.z, w_y*q_t.w-w_z*q_t.x+w_x*q_t.z, w_z*q_t.w+w_y*q_t.x-w_x*q_t.y)
+
+
+    return q_t
+
+    pass
 
  # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     # scaling_matrix = np.eye(3)
