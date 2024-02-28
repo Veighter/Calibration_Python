@@ -119,7 +119,7 @@ def optimize_acc_lm(a, static_intervals_list, thresholds):
         calibration_params = None
         avg_measurements = avg_measurements_static_interval(a, static_intervals)
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
-        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, method='lm')
+        calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, method='lm', verbose=1)
         opt_param.append((calibration_params['x'], calibration_params['cost']))
         
     costs = [cost for _, cost in opt_param]
@@ -222,61 +222,68 @@ def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
     b_w = np.mean(w[0:T_init*sample_rate, :], axis=0)
     w_b_free = w - b_w
 
-    a_0_avg = avg_measurements_static_interval(a_O, static_intervals)
-    m_0_avg = avg_measurements_static_interval(m_O, static_intervals)
+    a_O_avg = avg_measurements_static_interval(a_O, static_intervals)
+    m_O_avg = avg_measurements_static_interval(m_O, static_intervals)
 
     initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1] 
-    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_0_avg, m_0_avg, w_b_free, static_intervals), max_nfev=100000, ftol=ftol, verbose=1, method='lm')
+    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_O_avg, m_O_avg, w_b_free, static_intervals), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
 
-    return calibration_params['x']
+    return np.append(calibration_params['x'], b_w.tolist())
 
 
 def gyro_residuals(parameter_vector, *args):
     a_O_avg, m_O_avg, w_b_free, static_intervals = args
 
-    w_uncalibrated_b_free = []
+    residuals = []
 
     for i in range(len(static_intervals)):
 
         if i > 0:
-            a_k_1 = a_O_avg[i-1]
-            m_k_1 = m_O_avg[i-1]
-            a_k = a_O_avg[i]
-            m_k = m_O_avg[i]
+            a_t_1 = a_O_avg[i-1]
+            m_t_1 = m_O_avg[i-1]
+            a_t = a_O_avg[i]
+            m_t = m_O_avg[i]
             motion_interval_bound_left = static_intervals[i-1][1]
             motion_interval_bound_right = static_intervals[i][0]
         
-        w_k_1_to_k = w_b_free[motion_interval_bound_left:motion_interval_bound_right, :]
+            w_t_1_to_t = w_b_free[motion_interval_bound_left:motion_interval_bound_right, :]
 
-        R = quaternion_rotation(parameter_vector, w_k_1_to_k)
+            q = quaternion_integration(parameter_vector, w_t_1_to_t)
 
+            v_a = quaternion.as_vector_part(q.conjugate()*quaternion.from_vector_part(a_t_1)*q)
+            v_m = quaternion.as_vector_part(q.conjugate()*quaternion.from_vector_part(m_t_1)*q)
 
-    
+            diff_a = np.linalg.norm(v_a-a_t)
+            diff_m = np.linalg.norm(v_m-m_t)
 
-    
+            residuals.append(diff_a+diff_m)
+
+    return residuals
 
 # vllt ist hier die Dimension nicht richtig!!
 def sensor_error_model_gyro_transformation(parameter_vector, w):
     Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     return Theta@w.T
 
-def quaternion_rotation(parameter_vector, w):
-    w_bar = sensor_error_model_gyro_transformation(parameter_vector, w)
+def quaternion_integration(parameter_vector, w):
+    w_bar = sensor_error_model_gyro_transformation(parameter_vector, w).T
 
-    q_t = np,quaternion(1,0,0,0)
+    dt = 1/sample_rate
 
-    for meas in w:
-        w_x=meas[0]
-        w_y=meas[1]
-        w_z=meas[2]
+    q_t = np.quaternion(1,0,0,0)
+
+    for i in range(len(w_bar)):
+        w_x=w_bar[i,0]
+        w_y=w_bar[i,1]
+        w_z=w_bar[i,2]
+
+        w_quat = np.quaternion(0,w_x,w_y,w_z)
 
         # Equation (8) aus "Automatic Calibration IMU"
-        q_t = q_t+1./2*quaternion(-w_x*q_t.x-w_y*q_t.y-w_z*q_t.z, w_x*q_t.w+w_z*q_t.y-w_y*q_t.z, w_y*q_t.w-w_z*q_t.x+w_x*q_t.z, w_z*q_t.w+w_y*q_t.x-w_x*q_t.y)
-
+        q_t = q_t+(1./2)*w_quat*q_t*dt
+        q_t = q_t/np.linalg.norm(quaternion.as_float_array(q_t))
 
     return q_t
-
-    pass
 
  # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     # scaling_matrix = np.eye(3)

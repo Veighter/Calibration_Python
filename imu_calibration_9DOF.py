@@ -64,7 +64,7 @@ def gyro_fitness(parameter_vector, *args):
 
 def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
-    if sensor == 'acc':
+    if sensor == 'acc' or sensor == 'gyro':
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
         for raw_measurement in raw_measurements:
@@ -79,11 +79,12 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     #     for raw_measurement in raw_measurements:
     #             calibrated_measurements.append((np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@raw_measurement.T)-bias.T)
     if sensor == 'mag':    
-      #  Define calibration parameters
+    #  Define calibration parameters
         A = np.array(   [[0.941657, -0.005734, -0.004382],
                         [-0.005734, 0.989327, 0.011440],
                         [-0.004382, 0.011440, 0.949412]])
         b = np.array([-21.348454, 15.020109, 60.648129])
+
         
         for raw_measurement in raw_measurements:
             calibrated_measurements.append(A@(raw_measurement-b).T)
@@ -129,25 +130,55 @@ def main ():
 
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
-   # opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-   # opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-    avg_measurements_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
+    #opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+    #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+    mag_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
 
-
-    print(f"Opt_Params Accelerometer: {opt_param_acc}")
-  #  print(f"Opt_Params Magnetometer: {opt_param_mag}")
-    #print(f"Avg_measurements in Interval: {avg_measurements_opt_static_interval}")
-
-    return 0
+    acc_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(acc_measurements, static_intervals[thresholds.index(opt_threshold)])])
 
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
-
     opt_param_mag = None
+    
     calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
 
+
+    print(f"Opt_Params Accelerometer: {opt_param_acc}")
+
+    opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=150)
+
+    print(f"Opt_Params Gyroscope: {opt_param_gyro}")
+
+    calibrated_gyro_measurements = get_calibrated_measurements(gyro_measurements, opt_param_gyro, 'gyro')
+
+    dp.plot_measurements_out_of_data([calibrated_acc_measurements, calibrated_gyro_measurements, calibrated_mag_measurements], calibrated=True)
+
+    return 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #print(f"Opt_Params Magnetometer: {opt_param_mag}")
+    #print(f"Avg_measurements in Interval: {avg_measurements_opt_static_interval}")
+
+
+   
     
-    calibrated_avg_mag_measurements = get_calibrated_measurements(avg_measurements_opt_static_interval, opt_param_mag,"mag")
+    #calibrated_avg_mag_measurements = get_calibrated_measurements(mag_avg_opt_static_interval, opt_param_mag,"mag")
 
     # fig, [ax1, ax2] = plt.subplots(2,1)
     # ax1.plot(time, calibrated_acc_measurements)
@@ -166,7 +197,7 @@ def main ():
 
     # Plot XZ data
     plt.figure()
-    plt.plot(avg_measurements_opt_static_interval[:,0], avg_measurements_opt_static_interval[:,2], 'b*', label='Raw Meas.')
+    plt.plot(mag_avg_opt_static_interval[:,0], mag_avg_opt_static_interval[:,2], 'b*', label='Raw Meas.')
     plt.plot(calibrated_avg_mag_measurements[:,0], calibrated_avg_mag_measurements[:, 2], 'r*', label='Calibrated Meas.')
     plt.title('XZ Magnetometer Data')
     plt.xlabel('X [uT]')
@@ -177,7 +208,7 @@ def main ():
 
     # Plot XY data
     plt.figure()
-    plt.plot(avg_measurements_opt_static_interval[:,0], avg_measurements_opt_static_interval[:,1], 'b*', label='Raw Meas.')
+    plt.plot(mag_avg_opt_static_interval[:,0], mag_avg_opt_static_interval[:,1], 'b*', label='Raw Meas.')
     plt.plot(calibrated_avg_mag_measurements[:,0], calibrated_avg_mag_measurements[:, 1], 'r*', label='Calibrated Meas.')
     plt.title('XY Magnetometer Data')
     plt.xlabel('X [uT]')
@@ -188,7 +219,7 @@ def main ():
 
     # Plot YZ data
     plt.figure()
-    plt.plot(avg_measurements_opt_static_interval[:,1], avg_measurements_opt_static_interval[:,2], 'b*', label='Raw Meas.')
+    plt.plot(mag_avg_opt_static_interval[:,1], mag_avg_opt_static_interval[:,2], 'b*', label='Raw Meas.')
     plt.plot(calibrated_avg_mag_measurements[:,1], calibrated_avg_mag_measurements[:, 2], 'r*', label='Calibrated Meas.')
     plt.title('YZ Magnetometer Data')
     plt.xlabel('Y [uT]')
@@ -205,7 +236,7 @@ def main ():
 
     ## Natuerlich nur die Punkte nutzen, welche geaveraget wurden!!!
     # Das hier ist sinnlos
-    for avg_measurement in avg_measurements_opt_static_interval:
+    for avg_measurement in mag_avg_opt_static_interval:
 
         mag_x = avg_measurement[0]
         mag_y = avg_measurement[1]

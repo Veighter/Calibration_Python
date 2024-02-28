@@ -8,7 +8,7 @@ def plot_measurements_out_of_file():
         # TODO plot the raw measurements with matplotlib
         print('this')
 
-def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, shw_t=False):
+def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, shw_t=False, calibrated=False):
     
     fig = plot.figure(tight_layout=True)
     gs = gridspec.GridSpec(3,1)
@@ -33,21 +33,24 @@ def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, 
         ax4.set_xlabel("t [s]")
         ax4.set_title("Quasi-static-coefficients")
 
-
+    if calibrated:
+        display_String = "Calibrated "
+    else:
+        display_String = "Raw "
     
     ax1 = fig.add_subplot(gs[0,0])
     ax1.plot(time, measurements[:,1])
     ax1.plot(time, measurements[:,2])
     ax1.plot(time, measurements[:,3])
     ax1.set_ylabel("mg")
-    ax1.set_title("Raw accelerometer measurements")
+    ax1.set_title(display_String+"accelerometer measurements")
 
     ax1 = fig.add_subplot(gs[1,0])
     ax1.plot(time, measurements[:,4])
     ax1.plot(time, measurements[:,5])
     ax1.plot(time, measurements[:,6])
     ax1.set_ylabel("rad/s")
-    ax1.set_title("Raw gyroscope measurements")
+    ax1.set_title(display_String+"gyroscope measurements")
 
     ax1 = fig.add_subplot(gs[2,0])
     ax1.plot(time, measurements[:,7])
@@ -55,7 +58,7 @@ def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, 
     ax1.plot(time, measurements[:,9])
     ax1.set_xlabel("Time [s]")
     ax1.set_ylabel("uT")
-    ax1.set_title("Raw magnetometer measurements")
+    ax1.set_title(display_String+"magnetometer measurements")
 
     fig.align_labels()
 
