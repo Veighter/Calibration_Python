@@ -82,12 +82,34 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     #     for raw_measurement in raw_measurements:
     #             calibrated_measurements.append((np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@raw_measurement.T)-bias.T)
     if sensor == 'mag':    
-    #  Define calibration parameters
-        A = np.array(   [[0.941657, -0.005734, -0.004382],
-                        [-0.005734, 0.989327, 0.011440],
-                        [-0.004382, 0.011440, 0.949412]])
-        b = np.array([-21.348454, 15.020109, 60.648129])
+    #  calibration parameters with magneto Calibration Software
         
+        # IMU0
+#        A = np.array(   [[0.941657, -0.005734, -0.004382],
+#                        [-0.005734, 0.989327, 0.011440],
+#                        [-0.004382, 0.011440, 0.949412]])
+#        b = np.array([-21.348454, 15.020109, 60.648129])
+#
+        # IMU1
+#        A = np.array(   [[0.941657, -0.005734, -0.004382],
+#                        [-0.005734, 0.989327, 0.011440],
+#                        [-0.004382, 0.011440, 0.949412]])
+#        b = np.array([-21.348454, 15.020109, 60.648129])
+#      
+        # IMU6
+#        A = np.array(   [[0.941657, -0.005734, -0.004382],
+#                        [-0.005734, 0.989327, 0.011440],
+#                        [-0.004382, 0.011440, 0.949412]])
+#        b = np.array([-21.348454, 15.020109, 60.648129])
+#      
+    
+        #IMU7        
+        A = np.array(   [[0.919869 ,-0.063969, 0.036467], 
+                        [-0.063969, 1.003396, 0.002549],
+                        [0.036467, 0.002549, 1.048945]]) 
+        b = np.array([6.961981, -44.798494, 36.018804])
+
+
         return np.array([A@(raw_measurement - b).T for raw_measurement in raw_measurements])
 def main ():
     #plt.rcParams['text.usetex']=True
@@ -116,8 +138,14 @@ def main ():
     # plt.show()
 # 
     # Static Detection
-    raw_measurements = get_measurements('../../Datalogs/IMU_0.txt')
+    T_init = [150, 200, 100,200 ]
+    raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
 
+    # shift for the port numbers internally
+    if port_number == 6:
+        port_number=2
+    if port_number == 7:
+        port_number =3
     
     raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
@@ -128,7 +156,7 @@ def main ():
     gyro_measurements = raw_measurements[:,4:7]
     mag_measurements = raw_measurements[:,7:10]
 
-    static_detector_values_list = cwee.static_detector(acc_measurements, 150)
+    static_detector_values_list = cwee.static_detector(acc_measurements, T_init=T_init[port_number])
 
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
     thresholds = [static_detector_values_list[i][1] for i in range(len(static_detector_values_list))]
@@ -142,8 +170,10 @@ def main ():
     #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     mag_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
 
-    acc_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(acc_measurements, static_intervals[thresholds.index(opt_threshold)])])
+    with open(f"mag_measurements_{port_number}.txt", "w") as file:
+        file.write(str(mag_avg_opt_static_interval))
 
+   
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
 
     opt_param_mag = None
@@ -152,8 +182,8 @@ def main ():
 
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
-
-    opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=150)
+    
+    opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=T_init[port_number])
 
     print(f"Opt_Params Gyroscope: {opt_param_gyro}")
 
