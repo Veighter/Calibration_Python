@@ -1,0 +1,78 @@
+
+[
+    {
+        "imu": 0,
+        "accelerometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "magnetometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "gyroscope":
+        {
+            "theta": null,
+            "bias": null
+        }
+    },
+
+    {
+        "imu": 1,
+        "accelerometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "magnetometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "gyroscope":
+        {
+            "theta": null,
+            "bias": null
+        }
+    },
+
+    {
+        "imu": 6,
+        "accelerometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "magnetometer":
+        {
+            "theta": null,
+            "bias": null
+        },
+        "gyroscope":
+        {
+            "theta": null,
+            "bias": null
+        }
+    },
+
+    {
+        "imu": 7,
+        "accelerometer":
+        {
+            "theta":  [[0.996643923, 0.00345847616, -0.0105455711], [-0.0028747351, 0.997351685, 0.0171765314], [0.0104712047, -0.0120770725, 0.996643184]],
+            "bias": [0.513195483, -6.38354307, 18.6818155]
+        },
+        "magnetometer":
+        {
+            "theta": [[0.919869, -0.063969, 0.036467], [-0.063969, 1.003396, 0.002549], [0.036467, 0.002549, 1.048945]],
+            "bias": [6.961981, -44.798494, 36.018804]
+        },
+        "gyroscope":
+        {
+            "theta": [[0.93908668, -0.0466796, -0.20330397], [-0.13423415, 0.67620875, -0.33500868], [0.08244915, -0.28759273, 0.49361518]],
+            "bias": [-0.04707186, 0.00766569, 0.00236872]
+        }
+    }
+]
