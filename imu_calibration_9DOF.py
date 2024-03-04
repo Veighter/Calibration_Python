@@ -35,41 +35,44 @@ def get_measurements(filepath):
     raw_measurements_df = pd.read_csv(filepath)
     return raw_measurements_df.to_numpy() 
 
-def calibrate_sensor_ga(quasi_static_measurements, sensor):
-    if sensor == "acc":
-        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_ACC, 1000, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
-    if sensor == "mag":
-        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_MAG, 15, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
-    if sensor == "gyro":
-        return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
+# def calibrate_sensor_ga(quasi_static_measurements, sensor):
+#     if sensor == "acc":
+#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_ACC, 1000, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
+#     if sensor == "mag":
+#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_MAG, 15, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
+#     if sensor == "gyro":
+#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
 
-def calibrate_sensor_lm(sensor, quasi_static_measurements):
-    if sensor == "acc":
-        initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-        return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000, method='lm')
+# def calibrate_sensor_lm(sensor, quasi_static_measurements):
+#     if sensor == "acc":
+#         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+#         return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000, method='lm')
 
-def acc_fitness(parameter_vector, *args):
-    quasi_static_states, _ = args
-    cost = 0
-    for state in quasi_static_states:
-        cost += ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ state.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
-    print(f"Cost: {cost}")
-    return np.array(cost)
+# def acc_fitness(parameter_vector, *args):
+#     quasi_static_states, _ = args
+#     cost = 0
+#     for state in quasi_static_states:
+#         cost += ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ state.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
+#     print(f"Cost: {cost}")
+#     return np.array(cost)
 
-def mag_fitness(parameter_vector, *args):
-    pass
+# def mag_fitness(parameter_vector, *args):
+#     pass
 
-def gyro_fitness(parameter_vector, *args):
-    pass
+# def gyro_fitness(parameter_vector, *args):
+#     pass
 
 def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     calibrated_measurements = []
-    if sensor == 'acc' or sensor == 'gyro':
+    if sensor in ['acc','gyro']:
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
-        for raw_measurement in raw_measurements:
-                calibrated_measurements.append((theta@raw_measurement.T) - bias.T)
-    # if sensor == 'mag':
+        # for raw_measurement in raw_measurements:
+        #         calibrated_measurements.append((theta@raw_measurement.T) - bias.T)
+        return np.array([theta @ raw_measurement.T - bias.T for raw_measurement in raw_measurements]) 
+
+    
+    #if sensor == 'mag':
     #     axis_misalignment_matrix = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
     #     scaling_matrix = np.eye(3)
     #     scaling_matrix[0,0]= calibration_params[9]
@@ -84,29 +87,34 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
                         [-0.005734, 0.989327, 0.011440],
                         [-0.004382, 0.011440, 0.949412]])
         b = np.array([-21.348454, 15.020109, 60.648129])
-
         
-        for raw_measurement in raw_measurements:
-            calibrated_measurements.append(A@(raw_measurement-b).T)
-    return np.array(calibrated_measurements)
-
+        return np.array([A@(raw_measurement - b).T for raw_measurement in raw_measurements])
 def main ():
-
+    #plt.rcParams['text.usetex']=True
+    
+    port_number = 7
     # Allan Variance
-    # raw_measurements = get_measurements('../../Datalogs/Allan Variance/IMU_0.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
+#     raw_measurements = get_measurements(f'../../Datalogs/Allan Variance/IMU_{port_number}.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
+    
+#     raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
+#     raw_measurements[:,5] = raw_measurements[:,5]*math.pi/180
+#     raw_measurements[:,6] = raw_measurements[:,6]*math.pi/180
 
-    # allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
-    # allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
-    # allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
-
-    # time = raw_measurements[:,0]
+#     allan_variance_x = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,4]))
+#     allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
+#     allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
+# # 
+    # 
     # fig, ax = plt.subplots(1,1)
-    # ax.plot(allan_variance_x[0], allan_variance_x[1])
-    # ax.plot(allan_variance_y[0], allan_variance_y[1])
-    # ax.plot(allan_variance_z[0], allan_variance_z[1])
+    # allan_x =    ax.plot(allan_variance_x[0], allan_variance_x[1])
+    # allan_y =     ax.plot(allan_variance_y[0], allan_variance_y[1])
+    # allan_z = ax.plot(allan_variance_z[0], allan_variance_z[1])
+    # fig.legend(('x-axis', 'y-axis', 'z-axis'))
+    # ax.set_title(f'Allan Variance IMU{port_number}')
+    # ax.set_xlabel('$\hat{t}$ [s]')
+    # ax.set_ylabel('Allan Variance [$rad^2/s^2$]')
     # plt.show()
-
-
+# 
     # Static Detection
     raw_measurements = get_measurements('../../Datalogs/IMU_0.txt')
 
@@ -150,8 +158,12 @@ def main ():
     print(f"Opt_Params Gyroscope: {opt_param_gyro}")
 
     calibrated_gyro_measurements = get_calibrated_measurements(gyro_measurements, opt_param_gyro, 'gyro')
+    
 
-    dp.plot_measurements_out_of_data([calibrated_acc_measurements, calibrated_gyro_measurements, calibrated_mag_measurements], calibrated=True)
+    array_opt_measurements = np.concatenate((calibrated_acc_measurements, calibrated_gyro_measurements, calibrated_mag_measurements),axis=1)
+    concatenated_array = np.hstack((time[:, np.newaxis], array_opt_measurements))
+
+    dp.plot_measurements_out_of_data(concatenated_array, calibrated=True)
 
     return 0
 

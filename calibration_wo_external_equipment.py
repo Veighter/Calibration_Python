@@ -32,7 +32,7 @@ def allan_variance(w):
 
     allan_variance = np.zeros(shape=(len(times),))
 
-    for i, time in enumerate(times): # evenly space 0.1 Zeitsteps
+    for i, time in enumerate(times): 
         K = int(measurement_time/float(time))
         sample_number_intervall = (int)(time*sample_rate)
         
