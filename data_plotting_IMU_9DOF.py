@@ -15,7 +15,7 @@ def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, 
 
     time = np.array(measurements[:,0])
     time -= time[0]
-    time = time / (10e2)
+    
 
     if quasi_static_coefficients is not None and shw_t==True:
         gs = gridspec.GridSpec(5,1)

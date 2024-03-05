@@ -85,36 +85,36 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
     #  calibration parameters with magneto Calibration Software
         
         # IMU0
-#        A = np.array(   [[0.941657, -0.005734, -0.004382],
-#                        [-0.005734, 0.989327, 0.011440],
-#                        [-0.004382, 0.011440, 0.949412]])
-#        b = np.array([-21.348454, 15.020109, 60.648129])
-#
+        A = np.array(   [[0.945738, -0.003007, -0.006546],
+                        [-0.003007, 0.922916, 0.007009],
+                        [-0.006546, 0.007009, 0.949019]])
+        b = np.array([-21.155646, 15.087310, 60.443188])
+
         # IMU1
-#        A = np.array(   [[0.941657, -0.005734, -0.004382],
-#                        [-0.005734, 0.989327, 0.011440],
-#                        [-0.004382, 0.011440, 0.949412]])
-#        b = np.array([-21.348454, 15.020109, 60.648129])
-#      
-        # IMU6
-#        A = np.array(   [[0.941657, -0.005734, -0.004382],
-#                        [-0.005734, 0.989327, 0.011440],
-#                        [-0.004382, 0.011440, 0.949412]])
-#        b = np.array([-21.348454, 15.020109, 60.648129])
-#      
+        # A = np.array(   [[1.264232, -0.044928, -0.002404],
+        #                 [-0.044928, 1.225985, -0.006535],
+        #                 [-0.002404, -0.006535, 1.244639]])
+        # b = np.array([6.847327, -22.258473, 54.199930])
+        
+        # # IMU6
+        # A = np.array(   [[1.225777, 0.032457,0.029723],
+        #                 [0.032457, 1.188017, -0.026329],
+        #                 [0.029723, -0.026329, 1.139707]])
+        # b = np.array([-13.293332, -8.996860, 0.356970])
+      
     
         #IMU7        
-        A = np.array(   [[0.919869 ,-0.063969, 0.036467], 
-                        [-0.063969, 1.003396, 0.002549],
-                        [0.036467, 0.002549, 1.048945]]) 
-        b = np.array([6.961981, -44.798494, 36.018804])
-
-
+#        A = np.array(   [[0.919869 ,-0.063969, 0.036467], 
+#                        [-0.063969, 1.003396, 0.002549],
+#                        [0.036467, 0.002549, 1.048945]]) 
+#        b = np.array([6.961981, -44.798494, 36.018804])
+#
+#
         return np.array([A@(raw_measurement - b).T for raw_measurement in raw_measurements])
 def main ():
     #plt.rcParams['text.usetex']=True
     
-    port_number = 7
+    port_number =0 
     # Allan Variance
 #     raw_measurements = get_measurements(f'../../Datalogs/Allan Variance/IMU_{port_number}.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
     
@@ -161,21 +161,16 @@ def main ():
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
     thresholds = [static_detector_values_list[i][1] for i in range(len(static_detector_values_list))]
 
-    # with open("gyro_measurements.txt", "w") as file:
-    #     file.write(str(gyro_measurements[20413:20450,:]))
-
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
     #opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     mag_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
 
-    with open(f"mag_measurements_{port_number}.txt", "w") as file:
-        file.write(str(mag_avg_opt_static_interval))
-
-   
+    # with open(f"mag_measurements_{port_number}.txt", "w") as file:
+    #     file.write(str(mag_avg_opt_static_interval))
+    # return 0
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
-
     opt_param_mag = None
     
     calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
