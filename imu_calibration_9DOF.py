@@ -178,7 +178,7 @@ def main ():
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
     
-    opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=T_init[port_number])
+    opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=T_init[port_number], time=time)
 
     print(f"Opt_Params Gyroscope: {opt_param_gyro}")
 

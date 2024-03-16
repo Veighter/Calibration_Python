@@ -134,20 +134,20 @@ def avg_measurements_static_interval(dataset, static_intervals):
         avg_meas.append(meas_avg)
     return np.array(avg_meas)
 
-def calibration_algorithm(raw_measurements, sample_rate):
-    time = raw_measurements[:, 0]
-    acc_x = raw_measurements[:, 1]
-    acc_y = raw_measurements[:, 2]
-    acc_z = raw_measurements[:, 3]
-    mag_x =  raw_measurements[:, 7]
-    mag_y =  raw_measurements[:, 8]
-    mag_z =  raw_measurements[:, 9]
-    gyro_x = raw_measurements[:,4] 
-    gyro_y = raw_measurements[:, 5]
-    gyro_z = raw_measurements[:, 6]
+# def calibration_algorithm(raw_measurements, sample_rate):
+#     time = raw_measurements[:, 0]
+#     acc_x = raw_measurements[:, 1]
+#     acc_y = raw_measurements[:, 2]
+#     acc_z = raw_measurements[:, 3]
+#     mag_x =  raw_measurements[:, 7]
+#     mag_y =  raw_measurements[:, 8]
+#     mag_z =  raw_measurements[:, 9]
+#     gyro_x = raw_measurements[:,4] 
+#     gyro_y = raw_measurements[:, 5]
+#     gyro_z = raw_measurements[:, 6]
 
-    t_init = allan_variance(np.array([time, gyro_x, gyro_y, gyro_z]).T, sample_rate)
-    pass
+#     t_init = allan_variance(np.array([time, gyro_x, gyro_y, gyro_z]).T, sample_rate)
+#     pass
 
 def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
     Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
@@ -166,7 +166,7 @@ def acc_residuals(parameter_vector, *args):
 def gyro_fitness():
     pass
 
-
+# nicht verwendet, da MAGNETO das Ellipsoid Fitting uebernimmt
 def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
     # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     # scaling_matrix = np.eye(3)
@@ -215,9 +215,9 @@ def optimize_mag_diff_ev(m, static_intervals):
 
 
 
-def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
+def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init,time):
     max_nfev = 1000000
-    ftol=1e-10
+    ftol=1e-12
 
     b_w = np.mean(w[0:T_init*sample_rate, :], axis=0)
     w_b_free = w - b_w
@@ -226,31 +226,46 @@ def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init):
     m_O_avg = avg_measurements_static_interval(m_O, static_intervals)
 
     initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1] 
-    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_O_avg, m_O_avg, w_b_free, static_intervals), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
+    calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_O_avg, m_O_avg, w_b_free, static_intervals,time), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
 
     return np.append(calibration_params['x'], b_w.tolist())
 
 
 def gyro_residuals(parameter_vector, *args):
-    a_O_avg, m_O_avg, w_b_free, static_intervals = args
+    a_O_avg, m_O_avg, w_b_free, static_intervals,time = args
 
     residuals = []
 
     for i in range(len(static_intervals)):
 
         if i > 0:
-            a_t_1 = a_O_avg[i-1]
+            # a_t_1 = a_O_avg[i-1]
+            # m_t_1 = m_O_avg[i-1]
+            # a_t = a_O_avg[i]
+            # m_t = m_O_avg[i]
+
+            q_rot = np.quaternion(0,1,0,0) # Rotation about 180 degree about x-axis in local XYZ NED-Frame
+
+            a_t_1 = quaternion.as_vector_part(q_rot*quaternion.from_vector_part(a_O_avg[i-1])*q_rot.conjugate())
             m_t_1 = m_O_avg[i-1]
-            a_t = a_O_avg[i]
+            a_t = quaternion.as_vector_part(q_rot*quaternion.from_vector_part(a_O_avg[i])*q_rot.conjugate())
             m_t = m_O_avg[i]
+    
             motion_interval_bound_left = static_intervals[i-1][1]
             motion_interval_bound_right = static_intervals[i][0]
         
             w_t_1_to_t = w_b_free[motion_interval_bound_left:motion_interval_bound_right, :]
+            time_rotation = time[motion_interval_bound_left:motion_interval_bound_right]
 
-            q = quaternion_integration(parameter_vector, w_t_1_to_t)
+            q = quaternion_integration(parameter_vector, w_t_1_to_t,time_rotation)
 
-            v_a = quaternion.as_vector_part(q.conjugate()*quaternion.from_vector_part(a_t_1)*q)
+            a_quat = quaternion.from_vector_part(a_t_1)
+            q_conj = q.conjugate()
+            quat_v_a = quaternion.as_vector_part(q_conj*a_quat*q)
+
+            # v_a = quaternion.as_vector_part(q*quaternion.from_vector_part(a_t_1)*q.conjugate())
+
+            v_a = quat_v_a
             v_m = quaternion.as_vector_part(q.conjugate()*quaternion.from_vector_part(m_t_1)*q)
 
             diff_a = np.linalg.norm(v_a-a_t)
@@ -265,20 +280,29 @@ def sensor_error_model_gyro_transformation(parameter_vector, w):
     Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     return Theta@w.T
 
-def quaternion_integration(parameter_vector, w):
-    w_bar = sensor_error_model_gyro_transformation(parameter_vector, w).T
+def quaternion_integration(parameter_vector, w,time):
+    w_bar=[]
+    for gyro_measurement in w:
+        w_bar.append(sensor_error_model_gyro_transformation(parameter_vector, gyro_measurement).T)
 
-    dt = 1/sample_rate
-
+    w_bar = np.array(w_bar)
     q_t = np.quaternion(1,0,0,0)
+    #dt = 1/samplerate
 
     for i in range(len(w_bar)):
-        w_x=w_bar[i,0]
-        w_y=w_bar[i,1]
-        w_z=w_bar[i,2]
+        # w_x=w_bar[i,0]
+        # w_y=w_bar[i,1]
+        # w_z=w_bar[i,2]
 
-        w_quat = np.quaternion(0,w_x,w_y,w_z)
+        dt = time[i]-time[i-1]
 
+        q_rot = np.quaternion(0,1,0,0) # Rotation about 180 degree about x-axis in local XYZ NED-Frame
+
+        w_bar_NED = q_rot*quaternion.from_vector_part(w_bar[i,:])*q_rot.conjugate()
+
+        # Watch Out Axes of Rotation are not NED (x, -y, -z) are the axes compared to ned-sensor-frame
+        # w_quat = np.quaternion(0,w_x,-w_y,-w_z)
+        w_quat = w_bar_NED
         # Equation (8) aus "Automatic Calibration IMU"
         q_t = q_t+(1./2)*w_quat*q_t*dt
         q_t = q_t/np.linalg.norm(quaternion.as_float_array(q_t))
