@@ -270,6 +270,7 @@ def gyro_residuals(parameter_vector, *args):
 
             diff_a = np.linalg.norm(v_a-a_t)
             diff_m = np.linalg.norm(v_m-m_t)
+            diff_m=0
 
             residuals.append(diff_a+diff_m)
 

@@ -139,7 +139,8 @@ def main ():
 # 
     # Static Detection
     T_init = [150, 200, 100,200 ]
-    raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
+    #raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
+    raw_measurements = get_measurements(f'./IMU_0.txt')
 
     # shift for the port numbers internally
     if port_number == 6:

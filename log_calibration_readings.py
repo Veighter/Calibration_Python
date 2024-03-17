@@ -7,7 +7,7 @@ import numpy as np
 SER_PORT = 'COM4'  # Serial port
 SER_BAUD = 115200  # Serial baud rate
 SAMPLE_FREQ = 200  # Frequency to record magnetometer readings at [Hz]
-T_SAMPLE = 10 # Total time to read mangetometer readings [sec]
+T_SAMPLE = 600 # Total time to read mangetometer readings [sec]
 OUTPUT_FILENAME = 'IMU_0.txt'  # Output data file name
 SAMPLES=SAMPLE_FREQ*T_SAMPLE
 
