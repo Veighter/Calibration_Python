@@ -1,4 +1,4 @@
-Calibrate a 9DOF IMU with the methode of the Paper "Automatic Calibration for Inertial Measurement Unit" (Lin, et. alt.) (Accelerometer & Gyroscope) + Magneto Software (https://sites.google.com/view/sailboatinstruments1/a-download-magneto-v1-2)
+Calibrate a 9DOF IMU with the methode of the Paper "Automatic Calibration for Inertial Measurement Unit" (Lin, et. alt.) (Accelerometer & Gyroscope Sensor Error Model Residual Equations for LM-Algorithm) + Magneto Software (https://sites.google.com/view/sailboatinstruments1/a-download-magneto-v1-2)
 
 1. Determine Allan Variance
 2. Log Data
