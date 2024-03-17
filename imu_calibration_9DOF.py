@@ -165,7 +165,7 @@ def main ():
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
     #opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-    mag_avg_opt_static_interval = np.array([cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])])
+    mag_avg_opt_static_interval = cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
 
     # with open(f"mag_measurements_{port_number}.txt", "w") as file:
     #     file.write(str(mag_avg_opt_static_interval))
@@ -174,6 +174,7 @@ def main ():
     opt_param_mag = None
     
     calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
+
 
 
     print(f"Opt_Params Accelerometer: {opt_param_acc}")
@@ -215,7 +216,7 @@ def main ():
 
    
     
-    #calibrated_avg_mag_measurements = get_calibrated_measurements(mag_avg_opt_static_interval, opt_param_mag,"mag")
+    calibrated_avg_mag_measurements = get_calibrated_measurements(mag_avg_opt_static_interval, opt_param_mag,"mag")
 
     # fig, [ax1, ax2] = plt.subplots(2,1)
     # ax1.plot(time, calibrated_acc_measurements)
@@ -231,7 +232,7 @@ def main ():
     # ax2.plot(time, mag_measurements)
     # plt.show()
 
-
+    
     # Plot XZ data
     plt.figure()
     plt.plot(mag_avg_opt_static_interval[:,0], mag_avg_opt_static_interval[:,2], 'b*', label='Raw Meas.')
@@ -278,7 +279,7 @@ def main ():
         mag_x = avg_measurement[0]
         mag_y = avg_measurement[1]
         mag_z = avg_measurement[2]
-        ax.scatter(mag_x, mag_y, mag_z, color='r')
+        ax.scatter(mag_x, mag_y, mag_z, color='b')
 
     for calibrated_avg_mag_measurement in calibrated_avg_mag_measurements:
 
@@ -286,7 +287,7 @@ def main ():
         cal_mag_y = calibrated_avg_mag_measurement[1]
         cal_mag_z = calibrated_avg_mag_measurement[2]
 
-        ax.scatter(cal_mag_x, cal_mag_y, cal_mag_z, color='b')
+        ax.scatter(cal_mag_x, cal_mag_y, cal_mag_z, color='r')
 
     # with open("cal_mag_avg_measurements.txt", "w") as file:
     #     file.write(str(calibrated_avg_mag_measurements))
@@ -301,7 +302,7 @@ def main ():
 
     plt.show()
 
-
+   
 
 # # Randfall rechts fehlt!!
 # def static_interval_detector(static_detector_values):
