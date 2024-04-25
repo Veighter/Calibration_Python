@@ -8,30 +8,27 @@ def plot_measurements_out_of_file():
         # TODO plot the raw measurements with matplotlib
         print('this')
 
-def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, shw_t=False, calibrated=False):
+
+
+def plot_measurements_out_of_data(measurements, static_detector_values, calibrated=False, port_number=0):
     
+    title ="" 
     fig = plot.figure(tight_layout=True)
     gs = gridspec.GridSpec(3,1)
 
     time = np.array(measurements[:,0])
+    time /= 1e3
     time -= time[0]
     
 
-    if quasi_static_coefficients is not None and shw_t==True:
-        gs = gridspec.GridSpec(5,1)
-        ax4 = fig.add_subplot(gs[3,0])
-        ax4.plot(time, quasi_static_coefficients)
-        ax4.set_xlabel("t [s]")
-        ax4.set_title("Quasi-static-coefficients")
-        ax5 = fig.add_subplot(gs[4,0])
-        ax5.plot(time, quasi_static_coefficients>0.98)
-        ax5.set_title("Quasi-static-states")
-    if quasi_static_coefficients is not None and shw_t==False:
+    if static_detector_values is not None:
         gs = gridspec.GridSpec(4,1)
         ax4 = fig.add_subplot(gs[3,0])
-        ax4.plot(time, quasi_static_coefficients)
+        ax4.plot(time, static_detector_values)
         ax4.set_xlabel("t [s]")
-        ax4.set_title("Quasi-static-coefficients")
+        ax4.set_title("Static Detector Values")
+        title = f'Calibration Measurements of IMU {port_number}'
+        fig.suptitle(title, fontsize=14)
 
     if calibrated:
         display_String = "Calibrated "
@@ -56,13 +53,14 @@ def plot_measurements_out_of_data(measurements, quasi_static_coefficients=None, 
     ax1.plot(time, measurements[:,7])
     ax1.plot(time, measurements[:,8])
     ax1.plot(time, measurements[:,9])
-    ax1.set_xlabel("Time [s]")
     ax1.set_ylabel("uT")
     ax1.set_title(display_String+"magnetometer measurements")
 
     fig.align_labels()
 
     plot.show()
+
+    fig.savefig(f'../../Figures/{title}', bbox_inches='tight')
     #ax = fig.add_subplot(gs[1,:]) # second row slicing of the grid spec
 
 

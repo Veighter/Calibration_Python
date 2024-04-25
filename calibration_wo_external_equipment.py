@@ -9,7 +9,7 @@ magnitude_acc_local = 1000.16106 # mg
 magnitude_mag_local = 49.4006 # uTesla 18.2
 
 sample_rate = 100   # Hz
-t_wait = 1          # s
+t_wait = 1          # s  #changed to two seconds at 23.4
 
 
 def parse_allan_variance(w):
@@ -49,24 +49,24 @@ def allan_variance(w):
     return (times, allan_variance)
 
 # [x] implement the static Detector
-def static_detector(a, T_init):
+def static_detector(accelerometer_measurements, T_init):
     detector_threshold_tuples = [] # tuple holding [threshold, s_detector_values]
 
     sample_number_init_intervall = T_init*sample_rate
 
-    roh_init = static_detector_functional(a[0:sample_number_init_intervall, :])
+    roh_init = static_detector_functional(accelerometer_measurements[0:sample_number_init_intervall, :])
     
     sample_number_intervall = t_wait*sample_rate
     
-    for k in range(1,10): # Anomalien, wenn das k>1 ist
-        size_acc = len(a)
+    for k in range(1,10): # Anomalien, wenn das k>10 ist
+        size_acc = len(accelerometer_measurements)
         threshold = k*roh_init**2
         static_detector_values = np.zeros(shape = (size_acc,) )
         left_bound = (int)(sample_number_init_intervall-sample_number_intervall/2)
         right_bound = (int)(sample_number_init_intervall+sample_number_intervall/2)
-        for t, _ in enumerate(a[left_bound: ,:], sample_number_init_intervall):
+        for t, _ in enumerate(accelerometer_measurements[left_bound: ,:], sample_number_init_intervall):
 
-            variance_magnitude = static_detector_functional(a[left_bound:right_bound,:])
+            variance_magnitude = static_detector_functional(accelerometer_measurements[left_bound:right_bound,:])
             if variance_magnitude< threshold:
                 static_detector_values[t] = 1
             if variance_magnitude >= threshold:
@@ -83,10 +83,10 @@ def static_detector(a, T_init):
 
     return detector_threshold_tuples
 
-def static_detector_functional(a):
-    acc_x = a[:,0]
-    acc_y = a[:,1]
-    acc_z = a[:,2]
+def static_detector_functional(accelerometer_measurements):
+    acc_x = accelerometer_measurements[:,0]
+    acc_y = accelerometer_measurements[:,1]
+    acc_z = accelerometer_measurements[:,2]
     return np.linalg.norm([np.var(acc_x), np.var(acc_y), np.var(acc_z)])
 
 def static_interval_detector(static_detector_values):
@@ -113,17 +113,20 @@ def optimize_acc_lm(a, static_intervals_list, thresholds):
     opt_param = []
     max_nfev = 100000
     ftol=1e-10
-
+    
+    static_interval_number = []
     for static_intervals in static_intervals_list:
         avg_measurements = []
         calibration_params = None
         avg_measurements = avg_measurements_static_interval(a, static_intervals)
+        static_interval_number.append(len(avg_measurements))
         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] # 12 Params for the Matrix and the bias
         calibration_params = least_squares(acc_residuals, initial_parameter_vector, args=(avg_measurements, []), max_nfev=max_nfev, ftol=ftol, method='lm', verbose=1)
         opt_param.append((calibration_params['x'], calibration_params['cost']))
         
     costs = [cost for _, cost in opt_param]
     min_cost = costs.index(min(costs))
+    
     
     return opt_param[min_cost][0], thresholds[min_cost]
 
@@ -225,6 +228,7 @@ def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init,time):
     a_O_avg = avg_measurements_static_interval(a_O, static_intervals)
     m_O_avg = avg_measurements_static_interval(m_O, static_intervals)
 
+
     initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1] 
     calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_O_avg, m_O_avg, w_b_free, static_intervals,time), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
 
@@ -270,7 +274,7 @@ def gyro_residuals(parameter_vector, *args):
 
             diff_a = np.linalg.norm(v_a-a_t)
             diff_m = np.linalg.norm(v_m-m_t)
-            diff_m=0
+            #diff_m=0 geandert am 23.4
 
             residuals.append(diff_a+diff_m)
 

@@ -114,7 +114,7 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
 def main ():
     #plt.rcParams['text.usetex']=True
     
-    port_number =0 
+    port_number = 0
     # Allan Variance
 #     raw_measurements = get_measurements(f'../../Datalogs/Allan Variance/IMU_{port_number}.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
     
@@ -126,21 +126,23 @@ def main ():
 #     allan_variance_y = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,5]))
 #     allan_variance_z = cwee.allan_variance(cwee.parse_allan_variance(raw_measurements[:,6]))
 # # 
-    # 
-    # fig, ax = plt.subplots(1,1)
-    # allan_x =    ax.plot(allan_variance_x[0], allan_variance_x[1])
-    # allan_y =     ax.plot(allan_variance_y[0], allan_variance_y[1])
-    # allan_z = ax.plot(allan_variance_z[0], allan_variance_z[1])
-    # fig.legend(('x-axis', 'y-axis', 'z-axis'))
-    # ax.set_title(f'Allan Variance IMU{port_number}')
-    # ax.set_xlabel('$\hat{t}$ [s]')
-    # ax.set_ylabel('Allan Variance [$rad^2/s^2$]')
-    # plt.show()
+    
+#     fig, ax = plt.subplots(1,1)
+#     allan_x =    ax.plot(allan_variance_x[0], allan_variance_x[1])
+#     allan_y =     ax.plot(allan_variance_y[0], allan_variance_y[1])
+#     allan_z = ax.plot(allan_variance_z[0], allan_variance_z[1])
+#     fig.legend(('x-axis', 'y-axis', 'z-axis'))
+#     ax.set_title(f'Allan Variance IMU{port_number}')
+#     ax.set_xlabel('$\hat{t}$ [s]')
+#     ax.set_ylabel('Allan Variance [$rad^2/s^2$]')
+#     plt.show()
+
+    
 # 
     # Static Detection
-    T_init = [150, 200, 100,200 ]
-    #raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
-    raw_measurements = get_measurements(f'./IMU_0.txt')
+    T_init = [50, 200, 100,200 ]
+    raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
+    #raw_measurements = get_measurements(f'./IMU_0.txt')
 
     # shift for the port numbers internally
     if port_number == 6:
@@ -157,6 +159,8 @@ def main ():
     gyro_measurements = raw_measurements[:,4:7]
     mag_measurements = raw_measurements[:,7:10]
 
+
+    
     static_detector_values_list = cwee.static_detector(acc_measurements, T_init=T_init[port_number])
 
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
@@ -164,15 +168,22 @@ def main ():
 
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
+    print(opt_param_acc)
+    return 
     #opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
     #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-    mag_avg_opt_static_interval = cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+    
+    # save the detector values for the optimal solution of motion detection and minimizing the costfunction 
+    # np.savetxt(f"static_intervals IMU_{port_number} tw2s" ,static_detector_values_list[thresholds.index(opt_threshold)][0])
+
+    # mag_avg_opt_static_interval = cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
 
     # with open(f"mag_measurements_{port_number}.txt", "w") as file:
     #     file.write(str(mag_avg_opt_static_interval))
-    # return 0
+
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
     opt_param_mag = None
+
     
     calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
 
