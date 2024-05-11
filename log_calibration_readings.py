@@ -6,9 +6,9 @@ import numpy as np
 # GLOBAL VARIABLES
 SER_PORT = 'COM4'  # Serial port
 SER_BAUD = 115200  # Serial baud rate
-SAMPLE_FREQ = 200  # Frequency to record magnetometer readings at [Hz]
-T_SAMPLE = 600 # Total time to read mangetometer readings [sec]
-OUTPUT_FILENAME = 'IMU_0.txt'  # Output data file name
+SAMPLE_FREQ = 200  # Frequency to record readings at [Hz]
+T_SAMPLE = 600 # Total time to read readings [sec]
+OUTPUT_FILENAME = 'IMUs.txt'  # Output data file name
 SAMPLES=SAMPLE_FREQ*T_SAMPLE
 
 
@@ -104,5 +104,5 @@ print('Sensor Reading Complete!')
 
 for i in range(SAMPLES):
     with open(OUTPUT_FILENAME, 'a', newline='\n') as f:
-        writer = csv.writer(f, delimiter=',')
+        writer = csv.writer(f, delimiter='\t')
         writer.writerow([measurements[i, 0], measurements[i, 1], measurements[i, 2],measurements[i,3],measurements[i,4],measurements[i,5],measurements[i,6],measurements[i,7],measurements[i,8],measurements[i,9]])

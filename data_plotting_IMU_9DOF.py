@@ -61,6 +61,6 @@ def plot_measurements_out_of_data(measurements, static_detector_values, calibrat
     plot.show()
 
     fig.savefig(f'../../Figures/{title}', bbox_inches='tight')
-    #ax = fig.add_subplot(gs[1,:]) # second row slicing of the grid spec
+
 
 

@@ -18,6 +18,15 @@ Erklärung/ Terminologie
     - meist zufällig
 5. Solange Selektion bis Abbruchkriterium (durch Fintessfunktion) erreicht ist
 """
+
+
+# POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
+# SEARCH_SPACE_ACC = [(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000)] # milli gs
+# SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)] # degrees per seconde
+# SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)] # micro Tesla
+# CROSSOVER_PROBABILITY = 0.9
+# DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
+
 # Sensortyp, Suchraum Sensor, Measurements for Cost function, Cost Function
 import numpy as np
 import random as rd

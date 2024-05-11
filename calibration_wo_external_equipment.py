@@ -1,6 +1,3 @@
-# halbe stunde daten sammeln, entspricht bei einer sample-Frequenz von 100 Hz 180000 samplen
-# for statistic reasoning - damit das Intervall nicht statistisch zu viele Daten enthaelt - ist die Grenze 225s -> ueberworfen, siehe parse allan variance
-
 import numpy as np
 import quaternion
 from scipy.optimize import least_squares, differential_evolution
@@ -18,7 +15,6 @@ def parse_allan_variance(w):
     
     return w[0:cutoff_sample]
 
-# [x] Allan Variance von Gyroskop Daten bestimmen -> gleich grosse Intervall wichtig
 def allan_variance(w):
     # one axis allan variance computing
     time_begin = 1 # begin time in s
@@ -48,7 +44,7 @@ def allan_variance(w):
 
     return (times, allan_variance)
 
-# [x] implement the static Detector
+
 def static_detector(accelerometer_measurements, T_init):
     detector_threshold_tuples = [] # tuple holding [threshold, s_detector_values]
 
@@ -107,8 +103,9 @@ def static_interval_detector(static_detector_values):
 
     return static_intervals
 
-# TODO implement the optimizer for the parameters for the sensor error model with the levenberg marquard algorithnm
-# TODO use the same threshold, default is min cost threshold accelerometer optimum
+    """_summary_
+    Optimize accelerometer values with Levenberg-Marquard Algorithm
+    """
 def optimize_acc_lm(a, static_intervals_list, thresholds):
     opt_param = []
     max_nfev = 100000
@@ -137,27 +134,11 @@ def avg_measurements_static_interval(dataset, static_intervals):
         avg_meas.append(meas_avg)
     return np.array(avg_meas)
 
-# def calibration_algorithm(raw_measurements, sample_rate):
-#     time = raw_measurements[:, 0]
-#     acc_x = raw_measurements[:, 1]
-#     acc_y = raw_measurements[:, 2]
-#     acc_z = raw_measurements[:, 3]
-#     mag_x =  raw_measurements[:, 7]
-#     mag_y =  raw_measurements[:, 8]
-#     mag_z =  raw_measurements[:, 9]
-#     gyro_x = raw_measurements[:,4] 
-#     gyro_y = raw_measurements[:, 5]
-#     gyro_z = raw_measurements[:, 6]
-
-#     t_init = allan_variance(np.array([time, gyro_x, gyro_y, gyro_z]).T, sample_rate)
-#     pass
-
 def sensor_error_model_acc_transformation(parameter_vector, static_measurement):
     Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     b = np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])
     return (Theta @ static_measurement.T) -b.T
 
-# TODO implement fitness function (look Equaiton 9 and 10 "Robust and Easy Implementation for IMU Calibration")
 def acc_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
@@ -166,10 +147,7 @@ def acc_residuals(parameter_vector, *args):
     return residuals
     
 
-def gyro_fitness():
-    pass
-
-# nicht verwendet, da MAGNETO das Ellipsoid Fitting uebernimmt
+# not used
 def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
     # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     # scaling_matrix = np.eye(3)
@@ -183,9 +161,6 @@ def sensor_error_model_mag_transformation(parameter_vector, static_measurement):
     b = np.array([parameter_vector[9],parameter_vector[10], parameter_vector[11]])
 
     return A@static_measurement-b
-
-
-
 def mag_residuals(parameter_vector, *args):
     static_measurements, _ = args
     residuals = np.zeros(len(static_measurements))
@@ -194,7 +169,6 @@ def mag_residuals(parameter_vector, *args):
         transformation_norm = np.linalg.norm(transformation)
         residuals[i] = (1-transformation_norm)**2
     return np.sum(residuals)
-
 def optimize_mag_lm(m, static_intervals):
     max_nfev = 1000000
     ftol=1e-10
@@ -207,14 +181,7 @@ def optimize_mag_lm(m, static_intervals):
     
     return calibration_params['x']
 
-def optimize_mag_diff_ev(m, static_intervals):
-    avg_measurements = []
 
-    avg_measurements = avg_measurements_static_interval(m, static_intervals)
-
-    bounds = [(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-2,2),(-1000, 1000),(-1000, 1000),(-1000, 1000)]
-    result = differential_evolution(mag_residuals, args=(avg_measurements,[]), bounds=bounds,maxiter=10000)
-    return result['x']
 
 
 
@@ -233,8 +200,6 @@ def optimze_gyro_lm(w, static_intervals, a_O, m_O, T_init,time):
     calibration_params = least_squares(gyro_residuals, initial_parameter_vector, args=(a_O_avg, m_O_avg, w_b_free, static_intervals,time), max_nfev=max_nfev, ftol=ftol, verbose=1, method='lm')
 
     return np.append(calibration_params['x'], b_w.tolist())
-
-
 def gyro_residuals(parameter_vector, *args):
     a_O_avg, m_O_avg, w_b_free, static_intervals,time = args
 
@@ -279,11 +244,10 @@ def gyro_residuals(parameter_vector, *args):
             residuals.append(diff_a+diff_m)
 
     return residuals
-
-# vllt ist hier die Dimension nicht richtig!!
 def sensor_error_model_gyro_transformation(parameter_vector, w):
     Theta = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
     return Theta@w.T
+
 
 def quaternion_integration(parameter_vector, w,time):
     w_bar=[]
@@ -292,12 +256,10 @@ def quaternion_integration(parameter_vector, w,time):
 
     w_bar = np.array(w_bar)
     q_t = np.quaternion(1,0,0,0)
-    #dt = 1/samplerate
+
 
     for i in range(len(w_bar)):
-        # w_x=w_bar[i,0]
-        # w_y=w_bar[i,1]
-        # w_z=w_bar[i,2]
+    
 
         dt = time[i]-time[i-1]
 
@@ -306,19 +268,11 @@ def quaternion_integration(parameter_vector, w,time):
         w_bar_NED = q_rot*quaternion.from_vector_part(w_bar[i,:])*q_rot.conjugate()
 
         # Watch Out Axes of Rotation are not NED (x, -y, -z) are the axes compared to ned-sensor-frame
-        # w_quat = np.quaternion(0,w_x,-w_y,-w_z)
         w_quat = w_bar_NED
+
         # Equation (8) aus "Automatic Calibration IMU"
         q_t = q_t+(1./2)*w_quat*q_t*dt
         q_t = q_t/np.linalg.norm(quaternion.as_float_array(q_t))
 
     return q_t
 
- # axis_misalignment_matrix = np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]])
-    # scaling_matrix = np.eye(3)
-    # scaling_matrix[0,0]=parameter_vector[9]
-    # scaling_matrix[1,1]=parameter_vector[10]
-    # scaling_matrix[2,2]=parameter_vector[11]
-    # bias = np.array([parameter_vector[12], parameter_vector[13], parameter_vector[14]])
-    # inverse = np.linalg.inv(axis_misalignment_matrix)
-    #return inverse@scaling_matrix@axis_misalignment_matrix@(static_measurement-bias).T

@@ -6,23 +6,12 @@ import calibration_wo_external_equipment as cwee
 import numpy as np
 import math
 import pandas as pd
-from scipy.optimize import least_squares
-
-
 
 
 # get local magnitudes of magnetic field and acceleration at "https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm" and "https://www.ptb.de/cms/en/ptb/fachabteilungen/abt1/fb-11/fb-11-sis/g-extractor.html" 
 # https://www.mapcoordinates.net/de
 # 49,402.4 nT, 9.81158 m/s**2
 
-
-
-POPULATION_SIZE = 10e0 # typical size for differential evolution is 10*(number of inputs)
-SEARCH_SPACE_ACC = [(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000),(-1000,1000)] # milli gs
-SEARCH_SPACE_GYRO= [(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1),(-1,1)] # degrees per seconde
-SEARCH_SPACE_MAG = [(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5),(-5,5), (-100, 100),(-100,100), (-100,100)] # micro Tesla
-CROSSOVER_PROBABILITY = 0.9
-DIFFERENTIAL_WEIGHT = 0.8 # inital values guessed by wikipedia
 
 def get_measurements(filepath):
     """Get Method of the Raw Measurements of an IMU
@@ -35,52 +24,15 @@ def get_measurements(filepath):
     raw_measurements_df = pd.read_csv(filepath)
     return raw_measurements_df.to_numpy() 
 
-# def calibrate_sensor_ga(quasi_static_measurements, sensor):
-#     if sensor == "acc":
-#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_ACC, 1000, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
-#     if sensor == "mag":
-#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_MAG, 15, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
-#     if sensor == "gyro":
-#         return ga.algorithm(quasi_static_measurements, sensor, SEARCH_SPACE_GYRO, 1, POPULATION_SIZE, CROSSOVER_PROBABILITY, DIFFERENTIAL_WEIGHT)
-
-# def calibrate_sensor_lm(sensor, quasi_static_measurements):
-#     if sensor == "acc":
-#         initial_parameter_vector = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-#         return least_squares(acc_fitness, initial_parameter_vector, args=(quasi_static_measurements, []), verbose=1, max_nfev=100000000, method='lm')
-
-# def acc_fitness(parameter_vector, *args):
-#     quasi_static_states, _ = args
-#     cost = 0
-#     for state in quasi_static_states:
-#         cost += ((1000)-np.linalg.norm(np.array([parameter_vector[0:3], parameter_vector[3:6], parameter_vector[6:9]]) @ state.T-np.array([parameter_vector[9], parameter_vector[10], parameter_vector[11]])))**2
-#     print(f"Cost: {cost}")
-#     return np.array(cost)
-
-# def mag_fitness(parameter_vector, *args):
-#     pass
-
-# def gyro_fitness(parameter_vector, *args):
-#     pass
 
 def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
-    calibrated_measurements = []
+
     if sensor in ['acc','gyro']:
         theta = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
         bias = np.array([calibration_params[9], calibration_params[10], calibration_params[11]])
-        # for raw_measurement in raw_measurements:
-        #         calibrated_measurements.append((theta@raw_measurement.T) - bias.T)
+
         return np.array([theta @ raw_measurement.T - bias.T for raw_measurement in raw_measurements]) 
 
-    
-    #if sensor == 'mag':
-    #     axis_misalignment_matrix = np.array([calibration_params[0:3], calibration_params[3:6], calibration_params[6:9]])
-    #     scaling_matrix = np.eye(3)
-    #     scaling_matrix[0,0]= calibration_params[9]
-    #     scaling_matrix[1,1]= calibration_params[10]
-    #     scaling_matrix[2,2]=calibration_params[11]
-    #     bias = np.array([calibration_params[12], calibration_params[13], calibration_params[14]])
-    #     for raw_measurement in raw_measurements:
-    #             calibrated_measurements.append((np.linalg.inv(axis_misalignment_matrix)@scaling_matrix@axis_misalignment_matrix@raw_measurement.T)-bias.T)
     if sensor == 'mag':    
     #  calibration parameters with magneto Calibration Software
         
@@ -100,8 +52,7 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
         # A = np.array(   [[1.225777, 0.032457,0.029723],
         #                 [0.032457, 1.188017, -0.026329],
         #                 [0.029723, -0.026329, 1.139707]])
-        # b = np.array([-13.293332, -8.996860, 0.356970])
-      
+        # b = np.array([-13.293332, -8.996860, 0.356970]) 
     
         #IMU7        
 #        A = np.array(   [[0.919869 ,-0.063969, 0.036467], 
@@ -111,11 +62,16 @@ def get_calibrated_measurements(raw_measurements, calibration_params, sensor):
 #
 #
         return np.array([A@(raw_measurement - b).T for raw_measurement in raw_measurements])
-def main ():
-    #plt.rcParams['text.usetex']=True
     
+
+    """_summary_
+    Either computing of the allan Variance, or calibration of the IMU Sensors
+    """
+def main ():
+
     port_number = 0
-    # Allan Variance
+
+    # Allan Variance computing 
 #     raw_measurements = get_measurements(f'../../Datalogs/Allan Variance/IMU_{port_number}.txt') # Format of Raw Measurements is that as in the datalogs for the Allan Variance
     
 #     raw_measurements[:,4] = raw_measurements[:,4]*math.pi/180 # degree to radians
@@ -140,9 +96,8 @@ def main ():
     
 # 
     # Static Detection
-    T_init = [50, 200, 100,200 ]
+    T_init = [150, 200, 100,200 ]
     raw_measurements = get_measurements(f'../../Datalogs/Calibration Logs/IMU_{port_number}.txt')
-    #raw_measurements = get_measurements(f'./IMU_0.txt')
 
     # shift for the port numbers internally
     if port_number == 6:
@@ -159,8 +114,6 @@ def main ():
     gyro_measurements = raw_measurements[:,4:7]
     mag_measurements = raw_measurements[:,7:10]
 
-
-    
     static_detector_values_list = cwee.static_detector(acc_measurements, T_init=T_init[port_number])
 
     static_intervals = [cwee.static_interval_detector(static_detector_values_list[i][0]) for i in range(len(static_detector_values_list))]
@@ -168,40 +121,29 @@ def main ():
 
 
     opt_param_acc, opt_threshold = cwee.optimize_acc_lm(acc_measurements, static_intervals_list=static_intervals, thresholds=thresholds)
-    print(opt_param_acc)
-    return 
-    #opt_param_mag = cwee.optimize_mag_diff_ev(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-    #opt_param_mag = cwee.optimize_mag_lm(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
+    print(f"Opt_Params Accelerometer: {opt_param_acc}")
     
     # save the detector values for the optimal solution of motion detection and minimizing the costfunction 
     # np.savetxt(f"static_intervals IMU_{port_number} tw2s" ,static_detector_values_list[thresholds.index(opt_threshold)][0])
 
+    # Compute and save mag data for calibration with the magneto software
     # mag_avg_opt_static_interval = cwee.avg_measurements_static_interval(mag_measurements, static_intervals[thresholds.index(opt_threshold)])
-
     # with open(f"mag_measurements_{port_number}.txt", "w") as file:
     #     file.write(str(mag_avg_opt_static_interval))
+    # return
 
     calibrated_acc_measurements = get_calibrated_measurements(acc_measurements, opt_param_acc, "acc")
     opt_param_mag = None
-
-    
     calibrated_mag_measurements = get_calibrated_measurements(mag_measurements,  opt_param_mag, 'mag')
 
-
-
-    print(f"Opt_Params Accelerometer: {opt_param_acc}")
-    
     opt_param_gyro = cwee.optimze_gyro_lm(gyro_measurements, static_intervals[thresholds.index(opt_threshold)],calibrated_acc_measurements, calibrated_mag_measurements, T_init=T_init[port_number], time=time)
-
     print(f"Opt_Params Gyroscope: {opt_param_gyro}")
-
     calibrated_gyro_measurements = get_calibrated_measurements(gyro_measurements, opt_param_gyro, 'gyro')
     
-
     array_opt_measurements = np.concatenate((calibrated_acc_measurements, calibrated_gyro_measurements, calibrated_mag_measurements),axis=1)
     concatenated_array = np.hstack((time[:, np.newaxis], array_opt_measurements))
 
-    dp.plot_measurements_out_of_data(concatenated_array, calibrated=True)
+    #dp.plot_measurements_out_of_data(concatenated_array, calibrated=True)
 
     return 0
 
